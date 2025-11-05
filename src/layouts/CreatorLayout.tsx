@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, BookCopy, BarChart2, Users, Settings, GraduationCap, Menu, X, Bell, User } from 'lucide-react';
@@ -11,11 +11,10 @@ const navItems = [
   { name: 'Configurações', href: '/creator/settings', icon: Settings },
 ];
 
-const CreatorLayout: React.FC = () => {
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
+const SidebarContent: React.FC = () => {
   const location = useLocation();
 
-  const SidebarContent = () => (
+  return (
     <div className="bg-gray-900 text-gray-300 h-full flex flex-col">
       <div className="p-4 flex items-center space-x-3 border-b border-gray-800">
         <div className="bg-gradient-to-r from-primary-600 to-secondary-600 p-2 rounded-lg">
@@ -49,31 +48,49 @@ const CreatorLayout: React.FC = () => {
       </div>
     </div>
   );
+};
+
+const CreatorLayout: React.FC = () => {
+  const [isSidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (isSidebarOpen) {
+      setSidebarOpen(false);
+    }
+  }, [location.pathname]);
 
   return (
     <div className="h-screen w-screen bg-gray-100 flex">
-      {/* Desktop Sidebar */}
       <div className="hidden lg:block w-64 h-full flex-shrink-0">
         <SidebarContent />
       </div>
 
-      {/* Mobile Sidebar */}
       <AnimatePresence>
         {isSidebarOpen && (
-          <motion.div
-            initial={{ x: '-100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="lg:hidden w-64 h-full shadow-lg z-20 absolute"
-          >
-            <SidebarContent />
-          </motion.div>
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden fixed inset-0 bg-black/60 z-30"
+            />
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="lg:hidden w-64 h-full shadow-lg z-40 fixed top-0 left-0"
+            >
+              <SidebarContent />
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
 
       <div className="flex-1 flex flex-col h-full overflow-hidden">
-        <header className="bg-white shadow-sm p-4 flex justify-between items-center z-10 flex-shrink-0">
+        <header className="bg-white shadow-sm p-4 flex justify-between items-center z-20 flex-shrink-0">
           <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="lg:hidden p-2 rounded-full hover:bg-gray-100">
             {isSidebarOpen ? <X className="w-6 h-6 text-gray-600" /> : <Menu className="w-6 h-6 text-gray-600" />}
           </button>
