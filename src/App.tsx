@@ -13,6 +13,8 @@ import CreatorCoursesPage from './pages/creator/CreatorCoursesPage';
 import CreatorSalesPage from './pages/creator/CreatorSalesPage';
 import CreatorStudentsPage from './pages/creator/CreatorStudentsPage';
 import CreatorSettingsPage from './pages/creator/CreatorSettingsPage';
+import CreatorPagesListPage from './pages/creator/CreatorPagesListPage';
+import CreatorPageEditor from './pages/creator/CreatorPageEditor';
 
 function App() {
   return (
@@ -32,6 +34,9 @@ function App() {
           <Route path="courses" element={<CreatorCoursesPage />} />
           <Route path="sales" element={<CreatorSalesPage />} />
           <Route path="students" element={<CreatorStudentsPage />} />
+          <Route path="pages" element={<CreatorPagesListPage />} />
+          <Route path="pages/edit/:pageId" element={<CreatorPageEditor />} />
+          <Route path="pages/new" element={<CreatorPageEditor />} />
           <Route path="settings" element={<CreatorSettingsPage />} />
         </Route>
       </Routes>

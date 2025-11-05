@@ -1,4 +1,4 @@
-import { Course, User, Sale, CreatorStudent } from '../types';
+import { Course, User, Sale, CreatorStudent, LandingPage } from '../types';
 
 export const mockCourses: Course[] = [
   {
@@ -145,4 +145,35 @@ export const mockCreatorStudents: CreatorStudent[] = [
   { id: 'cs4', name: 'Ricardo Alves', email: 'ricardo.a@example.com', avatar: 'https://i.pravatar.cc/150?img=7', enrolledDate: '2025-07-19', totalSpent: 397.00 },
   { id: 'cs5', name: 'Beatriz Souza', email: 'beatriz.s@example.com', avatar: 'https://i.pravatar.cc/150?img=9', enrolledDate: '2025-07-18', totalSpent: 197.00 },
   { id: 'cs6', name: 'Marcos Andrade', email: 'marcos.a@example.com', avatar: 'https://i.pravatar.cc/150?img=10', enrolledDate: '2025-07-17', totalSpent: 644.00 },
+];
+
+export const mockLandingPages: LandingPage[] = [
+  {
+    id: 'lp1',
+    title: 'Página de Vendas - React Avançado',
+    courseId: '1',
+    courseTitle: 'React do Zero ao Avançado',
+    lastUpdated: '2025-07-21',
+    status: 'Publicada',
+    hero: {
+      title: 'Torne-se um Mestre em React.js',
+      subtitle: 'Do zero ao deploy, o curso mais completo do mercado para você dominar a biblioteca mais popular do mundo.',
+      cta: 'Garantir minha vaga agora',
+      image: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&h=450&fit=crop'
+    }
+  },
+  {
+    id: 'lp2',
+    title: 'Página de Vendas - Node.js',
+    courseId: '2',
+    courseTitle: 'Node.js e APIs RESTful',
+    lastUpdated: '2025-07-18',
+    status: 'Rascunho',
+    hero: {
+      title: 'Construa APIs Poderosas com Node.js',
+      subtitle: 'Aprenda a criar, testar e publicar APIs RESTful profissionais com as melhores práticas do mercado.',
+      cta: 'Quero me inscrever',
+      image: 'https://images.unsplash.com/photo-1627398242454-45a1465c2479?w=800&h=450&fit=crop'
+    }
+  }
 ];

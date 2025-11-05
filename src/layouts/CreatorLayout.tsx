@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, BookCopy, BarChart2, Users, Settings, GraduationCap, Menu, X, Bell, User } from 'lucide-react';
+import { LayoutDashboard, BookCopy, BarChart2, Users, Settings, GraduationCap, Menu, X, Bell, User, LayoutTemplate } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/creator', icon: LayoutDashboard },
   { name: 'Cursos', href: '/creator/courses', icon: BookCopy },
   { name: 'Vendas', href: '/creator/sales', icon: BarChart2 },
   { name: 'Alunos', href: '/creator/students', icon: Users },
+  { name: 'Páginas', href: '/creator/pages', icon: LayoutTemplate },
   { name: 'Configurações', href: '/creator/settings', icon: Settings },
 ];
 
-const SidebarContent: React.FC = () => {
+const SidebarContent: React.FC<{onLinkClick: () => void}> = ({ onLinkClick }) => {
   const location = useLocation();
 
   return (
@@ -28,8 +29,9 @@ const SidebarContent: React.FC = () => {
             <li key={item.name}>
               <Link
                 to={item.href}
+                onClick={onLinkClick}
                 className={`flex items-center space-x-3 px-4 py-2.5 rounded-lg transition-colors ${
-                  location.pathname === item.href
+                  location.pathname.startsWith(item.href) && (item.href !== '/creator' || location.pathname === '/creator')
                     ? 'bg-primary-600 text-white font-semibold'
                     : 'hover:bg-gray-800 hover:text-white'
                 }`}
@@ -52,18 +54,17 @@ const SidebarContent: React.FC = () => {
 
 const CreatorLayout: React.FC = () => {
   const [isSidebarOpen, setSidebarOpen] = useState(false);
-  const location = useLocation();
-
-  useEffect(() => {
+  
+  const handleLinkClick = () => {
     if (isSidebarOpen) {
       setSidebarOpen(false);
     }
-  }, [location.pathname]);
+  };
 
   return (
     <div className="h-screen w-screen bg-gray-100 flex">
       <div className="hidden lg:block w-64 h-full flex-shrink-0">
-        <SidebarContent />
+        <SidebarContent onLinkClick={() => {}} />
       </div>
 
       <AnimatePresence>
@@ -83,7 +84,7 @@ const CreatorLayout: React.FC = () => {
               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
               className="lg:hidden w-64 h-full shadow-lg z-40 fixed top-0 left-0"
             >
-              <SidebarContent />
+              <SidebarContent onLinkClick={handleLinkClick} />
             </motion.div>
           </>
         )}

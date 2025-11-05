@@ -57,3 +57,18 @@ export interface CreatorStudent {
   enrolledDate: string;
   totalSpent: number;
 }
+
+export interface LandingPage {
+  id: string;
+  title: string;
+  courseId: string;
+  courseTitle: string;
+  lastUpdated: string;
+  status: 'Publicada' | 'Rascunho';
+  hero: {
+    title: string;
+    subtitle: string;
+    cta: string;
+    image: string;
+  };
+}
