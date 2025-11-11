@@ -19,7 +19,7 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'cursos_plataform',
-  synchronize: process.env.NODE_ENV !== 'production', // Apenas em desenvolvimento
+  synchronize: false, // Desabilitado - tabelas criadas manualmente via SQL
   logging: process.env.NODE_ENV === 'development',
   entities: [User, Course, Enrollment, Sale, LandingPage, Affiliate, AffiliateSale, AppConfig],
   migrations: ['src/migrations/**/*.ts'],

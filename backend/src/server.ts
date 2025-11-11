@@ -39,6 +39,25 @@ async function connectDatabase() {
     await AppDataSource.initialize();
     console.log('✅ Conectado ao PostgreSQL');
     console.log(`📊 Banco de dados: ${AppDataSource.options.database}`);
+    
+    // Verificar se a tabela users existe, se não, tentar criar
+    try {
+      const queryRunner = AppDataSource.createQueryRunner();
+      const result = await queryRunner.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'users'
+        );
+      `);
+      
+      if (!result[0].exists) {
+        console.log('⚠️  Tabelas não encontradas. Execute: npm run init-db');
+        console.log('   Ou execute o script create_tables.sql no DBeaver');
+      }
+    } catch (checkError) {
+      // Ignorar erros de verificação
+    }
   } catch (err: any) {
     retryCount++;
     console.error(`❌ Erro ao conectar ao PostgreSQL (tentativa ${retryCount}/${maxRetries}):`, err.message);
