@@ -1,14 +1,46 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Star, Users, Award, Zap, TrendingUp, Shield } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import CourseCard from '../components/CourseCard';
-import { mockCourses } from '../data/mockData';
+import { coursesAPI } from '../services/api';
+import { Course } from '../types';
 
 const HomePage: React.FC = () => {
-  const featuredCourses = mockCourses.slice(0, 4);
+  const [featuredCourses, setFeaturedCourses] = useState<Course[]>([]);
+
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await coursesAPI.getAll({ limit: 4 });
+        // TypeORM retorna 'id', não '_id'
+        const mappedCourses = response.courses.map((course: any) => ({
+          id: course.id || course._id, // Suporta ambos os formatos
+          title: course.title,
+          description: course.description,
+          thumbnail: course.thumbnail,
+          price: course.price,
+          originalPrice: course.originalPrice,
+          instructor: course.instructor,
+          instructorAvatar: course.instructorAvatar,
+          rating: course.rating,
+          totalStudents: course.totalStudents,
+          duration: course.duration,
+          level: course.level,
+          category: course.category,
+          modules: course.modules || [],
+          features: course.features || []
+        }));
+        setFeaturedCourses(mappedCourses);
+      } catch (error) {
+        console.error('Erro ao carregar cursos:', error);
+      }
+    };
+
+    fetchCourses();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -123,7 +155,7 @@ const HomePage: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {featuredCourses.map((course, index) => (
               <motion.div
-                key={course.id}
+                key={course.id || course._id || `course-${index}`}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
@@ -150,7 +182,7 @@ const HomePage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Por que Escolher a EduPlus?
+              Por que Escolher a MindX?
             </h2>
           </div>
 

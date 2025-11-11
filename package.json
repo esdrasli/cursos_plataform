@@ -6,10 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:prod": "NODE_ENV=production vite build --mode production",
     "lint": "eslint .",
     "lint:dualite": "eslint --config eslint.dualite.config.js .",
     "tsc:dualite": "yarn tsc -p tsconfig.dualite.json",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:all": "./build/build.sh",
+    "build:hostinger": "./build/hostinger.sh",
+    "docker:build": "./build/docker-build.sh",
+    "docker:deploy": "./build/deploy.sh"
   },
   "dependencies": {
     "lucide-react": "^0.511.0",

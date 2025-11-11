@@ -1,0 +1,18 @@
+# Frontend Dockerfile para Desenvolvimento
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Copiar arquivos de dependências
+COPY package*.json ./
+COPY yarn.lock* package-lock.json* ./
+
+# Instalar dependências
+RUN if [ -f yarn.lock ]; then yarn install --frozen-lockfile; else npm install; fi
+
+# Expor porta do Vite
+EXPOSE 5173
+
+# Comando para desenvolvimento
+CMD sh -c "if [ -f yarn.lock ]; then yarn dev --host 0.0.0.0; else npm run dev -- --host 0.0.0.0; fi"
+

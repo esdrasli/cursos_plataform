@@ -1,0 +1,283 @@
+import axios from 'axios';
+
+// Configuração da URL da API
+// IMPORTANTE: 
+// - Em desenvolvimento: usa localhost:3001 (Docker ou local)
+// - Em produção: usa VITE_API_URL do .env.production
+// - No navegador, sempre usar localhost:3001, não o nome do serviço Docker
+const getApiUrl = () => {
+  // 1. Se houver VITE_API_URL definida (produção), usar ela
+  const envUrl = import.meta.env.VITE_API_URL;
+  
+  if (envUrl) {
+    // Ignorar se contém nome de serviço Docker (não funciona no navegador)
+    if (envUrl.includes('backend:') || envUrl.includes('backend/')) {
+      console.warn('⚠️ VITE_API_URL contém nome de serviço Docker, usando localhost:3001');
+      return 'http://localhost:3001/api';
+    }
+    // URL válida para produção
+    return envUrl;
+  }
+  
+  // 2. Em desenvolvimento (sem VITE_API_URL), usar localhost:3001
+  // Isso funciona tanto no Docker quanto localmente
+  return 'http://localhost:3001/api';
+};
+
+const API_URL = getApiUrl();
+
+// Log para debug
+console.log('🔧 API URL configurada:', API_URL);
+
+const api = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Interceptor para adicionar token em todas as requisições
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor para tratar erros de autenticação e melhorar mensagens de erro
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Tratar diferentes tipos de erros
+    if (error.response) {
+      // Erro da API com resposta
+      const status = error.response.status;
+      const message = error.response.data?.message || 'Erro desconhecido';
+
+      switch (status) {
+        case 401:
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+          error.message = 'Sua sessão expirou. Por favor, faça login novamente.';
+          break;
+        case 403:
+          error.message = 'Você não tem permissão para realizar esta ação.';
+          break;
+        case 404:
+          error.message = message || 'Recurso não encontrado.';
+          break;
+        case 422:
+          error.message = message || 'Dados inválidos. Verifique os campos e tente novamente.';
+          break;
+        case 500:
+          error.message = 'Erro interno do servidor. Tente novamente mais tarde.';
+          break;
+        default:
+          error.message = message || 'Ocorreu um erro. Tente novamente.';
+      }
+    } else if (error.request) {
+      // Erro de rede (sem resposta do servidor)
+      console.error('Erro de rede:', error.request);
+      console.error('URL tentada:', error.config?.url);
+      console.error('Base URL:', error.config?.baseURL);
+      error.message = 'Erro de conexão. Verifique sua internet e tente novamente.';
+    } else {
+      // Outro tipo de erro
+      error.message = error.message || 'Ocorreu um erro inesperado.';
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+// Auth API
+export const authAPI = {
+  register: async (data: { name: string; email: string; password: string; role?: string }) => {
+    const response = await api.post('/auth/register', data);
+    return response.data;
+  },
+  login: async (data: { email: string; password: string }) => {
+    const response = await api.post('/auth/login', data);
+    return response.data;
+  },
+  me: async () => {
+    const response = await api.get('/auth/me');
+    return response.data;
+  },
+};
+
+// Courses API
+export const coursesAPI = {
+  getAll: async (params?: { search?: string; category?: string; level?: string; page?: number; limit?: number }) => {
+    const response = await api.get('/courses', { params });
+    return response.data;
+  },
+  getById: async (id: string) => {
+    const response = await api.get(`/courses/${id}`);
+    return response.data;
+  },
+  create: async (data: any) => {
+    const response = await api.post('/courses', data);
+    return response.data;
+  },
+  update: async (id: string, data: any) => {
+    const response = await api.put(`/courses/${id}`, data);
+    return response.data;
+  },
+  delete: async (id: string) => {
+    const response = await api.delete(`/courses/${id}`);
+    return response.data;
+  },
+  getMyCourses: async () => {
+    const response = await api.get('/courses/creator/my-courses');
+    return response.data;
+  },
+};
+
+// Checkout API
+export const checkoutAPI = {
+  getCourseInfo: async (courseId: string) => {
+    const response = await api.get(`/checkout/course/${courseId}`);
+    return response.data;
+  },
+  process: async (data: { courseId: string; paymentMethod: string; paymentData?: any; affiliateCode?: string }) => {
+    const response = await api.post('/checkout/process', data);
+    return response.data;
+  },
+};
+
+// Affiliate API
+export const affiliateAPI = {
+  register: async (data: { name: string; email: string; paymentInfo?: string }) => {
+    const response = await api.post('/affiliate/register', data);
+    return response.data;
+  },
+  getMe: async () => {
+    const response = await api.get('/affiliate/me');
+    return response.data;
+  },
+  getStats: async () => {
+    const response = await api.get('/affiliate/stats');
+    return response.data;
+  },
+  getSales: async () => {
+    const response = await api.get('/affiliate/sales');
+    return response.data;
+  },
+  getCourses: async () => {
+    const response = await api.get('/affiliate/courses');
+    return response.data;
+  },
+  getLink: async (courseId: string) => {
+    const response = await api.get(`/affiliate/link/${courseId}`);
+    return response.data;
+  },
+};
+
+// Dashboard API
+export const dashboardAPI = {
+  getMyCourses: async () => {
+    const response = await api.get('/dashboard/my-courses');
+    return response.data;
+  },
+  getStats: async () => {
+    const response = await api.get('/dashboard/stats');
+    return response.data;
+  },
+  getRecommendations: async () => {
+    const response = await api.get('/dashboard/recommendations');
+    return response.data;
+  },
+};
+
+// Learning API
+export const learningAPI = {
+  getCourse: async (courseId: string) => {
+    const response = await api.get(`/learning/course/${courseId}`);
+    return response.data;
+  },
+  completeLesson: async (data: { courseId: string; moduleId: string; lessonId: string }) => {
+    const response = await api.post('/learning/complete-lesson', data);
+    return response.data;
+  },
+  getProgress: async (courseId: string) => {
+    const response = await api.get(`/learning/progress/${courseId}`);
+    return response.data;
+  },
+};
+
+// Creator API
+export const creatorAPI = {
+  getDashboardStats: async () => {
+    const response = await api.get('/creator/dashboard/stats');
+    return response.data;
+  },
+  getSales: async (params?: { search?: string; page?: number; limit?: number }) => {
+    const response = await api.get('/creator/sales', { params });
+    return response.data;
+  },
+  getStudents: async (params?: { search?: string; page?: number; limit?: number }) => {
+    const response = await api.get('/creator/students', { params });
+    return response.data;
+  },
+  getLandingPages: async () => {
+    const response = await api.get('/creator/landing-pages');
+    return response.data;
+  },
+  getLandingPage: async (id: string) => {
+    const response = await api.get(`/creator/landing-pages/${id}`);
+    return response.data;
+  },
+  createLandingPage: async (data: any) => {
+    const response = await api.post('/creator/landing-pages', data);
+    return response.data;
+  },
+  updateLandingPage: async (id: string, data: any) => {
+    const response = await api.put(`/creator/landing-pages/${id}`, data);
+    return response.data;
+  },
+  deleteLandingPage: async (id: string) => {
+    const response = await api.delete(`/creator/landing-pages/${id}`);
+    return response.data;
+  },
+  generateAIContent: async (data: { prompt: string; courseTitle?: string; courseDescription?: string }) => {
+    const response = await api.post('/creator/ai/generate-content', data);
+    return response.data;
+  },
+};
+
+// Config API
+export const configAPI = {
+  getAll: async () => {
+    const response = await api.get('/config');
+    return response.data;
+  },
+  getByKey: async (key: string) => {
+    const response = await api.get(`/config/${key}`);
+    return response.data;
+  },
+  set: async (key: string, value: any, type?: string, description?: string, category?: string) => {
+    const response = await api.post('/config', { key, value, type, description, category });
+    return response.data;
+  },
+  update: async (key: string, value: any, type?: string, description?: string, category?: string) => {
+    const response = await api.put(`/config/${key}`, { value, type, description, category });
+    return response.data;
+  },
+  delete: async (key: string) => {
+    const response = await api.delete(`/config/${key}`);
+    return response.data;
+  },
+};
+
+export default api;
+

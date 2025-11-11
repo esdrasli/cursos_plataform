@@ -1,12 +1,48 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { GraduationCap, Mail, Lock, LogIn } from 'lucide-react';
+import { GraduationCap, LogIn } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import { useAuth } from '../contexts/AuthContext';
+import { validateEmail, validatePassword } from '../utils/validation';
 
 const LoginPage: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string; name?: string }>({});
+  const { login, register } = useAuth();
+  const navigate = useNavigate();
+
+  const validateFields = (): boolean => {
+    const errors: any = {};
+    let isValid = true;
+
+    if (!isLogin) {
+      if (!name || name.length < 3) {
+        errors.name = 'Nome deve ter pelo menos 3 caracteres';
+        isValid = false;
+      }
+    }
+
+    if (!email || !validateEmail(email)) {
+      errors.email = 'Email inválido';
+      isValid = false;
+    }
+
+    const passwordValidation = validatePassword(password);
+    if (!password || !passwordValidation.valid) {
+      errors.password = passwordValidation.message || 'Senha inválida';
+      isValid = false;
+    }
+
+    setFieldErrors(errors);
+    return isValid;
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -29,15 +65,58 @@ const LoginPage: React.FC = () => {
             </p>
           </div>
 
-          <form className="space-y-6">
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
+
+          <form 
+            className="space-y-6"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setError('');
+              setFieldErrors({});
+              
+              if (!validateFields()) {
+                return;
+              }
+
+              setIsLoading(true);
+              
+              try {
+                if (isLogin) {
+                  await login(email, password);
+                  navigate('/dashboard');
+                } else {
+                  await register(name, email, password);
+                  navigate('/dashboard');
+                }
+              } catch (err: any) {
+                setError(err.message || 'Erro ao fazer login. Tente novamente.');
+              } finally {
+                setIsLoading(false);
+              }
+            }}
+          >
             {!isLogin && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Nome</label>
                 <input
                   type="text"
                   placeholder="Seu nome completo"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    if (fieldErrors.name) setFieldErrors({...fieldErrors, name: undefined});
+                  }}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent ${
+                    fieldErrors.name ? 'border-red-500' : 'border-gray-300'
+                  }`}
                 />
+                {fieldErrors.name && (
+                  <p className="mt-1 text-sm text-red-600">{fieldErrors.name}</p>
+                )}
               </div>
             )}
             <div>
@@ -45,16 +124,36 @@ const LoginPage: React.FC = () => {
               <input
                 type="email"
                 placeholder="seu@email.com"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  if (fieldErrors.email) setFieldErrors({...fieldErrors, email: undefined});
+                }}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent ${
+                  fieldErrors.email ? 'border-red-500' : 'border-gray-300'
+                }`}
               />
+              {fieldErrors.email && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Senha</label>
               <input
                 type="password"
                 placeholder="Sua senha"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (fieldErrors.password) setFieldErrors({...fieldErrors, password: undefined});
+                }}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-primary-600 focus:border-transparent ${
+                  fieldErrors.password ? 'border-red-500' : 'border-gray-300'
+                }`}
               />
+              {fieldErrors.password && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>
+              )}
             </div>
             {isLogin && (
               <div className="flex items-center justify-between">
@@ -68,13 +167,14 @@ const LoginPage: React.FC = () => {
               </div>
             )}
             <div>
-              <Link
-                to="/dashboard"
-                className="w-full flex justify-center items-center px-6 py-3 bg-gradient-to-r from-primary-600 to-secondary-600 text-white rounded-lg font-bold hover:shadow-lg transition-all"
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full flex justify-center items-center px-6 py-3 bg-gradient-to-r from-primary-600 to-secondary-600 text-white rounded-lg font-bold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <LogIn className="w-5 h-5 mr-2" />
-                {isLogin ? 'Entrar' : 'Criar Conta'}
-              </Link>
+                {isLoading ? 'Carregando...' : (isLogin ? 'Entrar' : 'Criar Conta')}
+              </button>
             </div>
           </form>
 

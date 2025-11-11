@@ -1,0 +1,11 @@
+# Versão SIMPLES - Use esta se a outra não funcionar
+# Renomeie este arquivo para .htaccess se necessário
+
+RewriteEngine On
+RewriteBase /
+
+# Redirecionar para index.html se arquivo não existir
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.html [L]
+

@@ -1,0 +1,27 @@
+# Configuração para Hostinger - SPA Routing
+# Versão simplificada e compatível
+
+# Habilitar Rewrite Engine
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  
+  # Não redirecionar arquivos e pastas existentes
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  
+  # Redirecionar todas as rotas para index.html (SPA)
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Permitir acesso (compatível Apache 2.4 e 2.2)
+<IfModule mod_authz_core.c>
+  # Apache 2.4
+  Require all granted
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+  # Apache 2.2
+  Order allow,deny
+  Allow from all
+</IfModule>

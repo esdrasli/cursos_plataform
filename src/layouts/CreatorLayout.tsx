@@ -21,7 +21,7 @@ const SidebarContent: React.FC<{onLinkClick: () => void}> = ({ onLinkClick }) =>
         <div className="bg-gradient-to-r from-primary-600 to-secondary-600 p-2 rounded-lg">
           <GraduationCap className="w-6 h-6 text-white" />
         </div>
-        <span className="text-xl font-bold text-white">EduPlus Creator</span>
+        <span className="text-xl font-bold text-white">MindX Creator</span>
       </div>
       <nav className="flex-grow p-4">
         <ul className="space-y-2">

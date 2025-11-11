@@ -1,24 +1,107 @@
-import React from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Star, Users, Clock, Award, CheckCircle, Play, Calendar } from 'lucide-react';
+import { Star, Users, Clock, Award, CheckCircle, Play, ShoppingCart, Check } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { mockCourses } from '../data/mockData';
+import Loading from '../components/Loading';
+import Error from '../components/Error';
+import { coursesAPI } from '../services/api';
+import { Course } from '../types';
+import { useCart } from '../contexts/CartContext';
 
 const CourseDetailPage: React.FC = () => {
-  const { id } = useParams();
-  const course = mockCourses.find(c => c.id === id);
+  const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const affiliateCode = searchParams.get('ref'); // Capturar código de afiliado da URL
+  const [course, setCourse] = useState<Course | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+  const { addToCart, isInCart } = useCart();
+  const [addedToCart, setAddedToCart] = useState(false);
 
-  if (!course) {
+  // Converter preços para números quando o curso for carregado
+  const coursePrice = course ? (typeof course.price === 'number' ? course.price : parseFloat(course.price) || 0) : 0;
+  const originalPrice = course?.originalPrice 
+    ? (typeof course.originalPrice === 'number' ? course.originalPrice : parseFloat(course.originalPrice) || 0)
+    : null;
+
+  useEffect(() => {
+    const fetchCourse = async () => {
+      if (!id || id === 'undefined') {
+        console.error('CourseDetailPage: ID inválido', id);
+        setError('ID do curso inválido');
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        setIsLoading(true);
+        console.log('Buscando curso com ID:', id); // Debug
+        const data = await coursesAPI.getById(id);
+        
+        // Mapear os dados do backend para o formato do frontend
+        // TypeORM retorna 'id', não '_id'
+        const mappedCourse: Course = {
+          id: data.id || data._id, // Suporta ambos os formatos
+          title: data.title,
+          description: data.description,
+          thumbnail: data.thumbnail,
+          price: data.price,
+          originalPrice: data.originalPrice,
+          instructor: data.instructor,
+          instructorAvatar: data.instructorAvatar,
+          rating: data.rating,
+          totalStudents: data.totalStudents,
+          duration: data.duration,
+          level: data.level,
+          category: data.category,
+          modules: data.modules || [],
+          features: data.features || []
+        };
+        
+        console.log('Curso mapeado:', { id: mappedCourse.id, title: mappedCourse.title }); // Debug
+        
+        setCourse(mappedCourse);
+        setError('');
+      } catch (err: any) {
+        setError('Erro ao carregar curso');
+        console.error('Erro ao buscar curso:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCourse();
+  }, [id]);
+
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Header />
-        <div className="max-w-7xl mx-auto px-4 py-20 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Curso não encontrado</h1>
-          <Link to="/cursos" className="text-primary-600 hover:underline mt-4 inline-block">
-            Voltar para cursos
-          </Link>
+        <div className="max-w-7xl mx-auto px-4 py-20">
+          <Loading message="Carregando curso..." />
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error || !course) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Header />
+        <div className="max-w-7xl mx-auto px-4 py-20">
+          <Error 
+            message={error || 'Curso não encontrado'} 
+            onRetry={() => window.location.reload()}
+          />
+          <div className="text-center mt-4">
+            <Link to="/cursos" className="text-primary-600 hover:underline">
+              Voltar para cursos
+            </Link>
+          </div>
         </div>
         <Footer />
       </div>
@@ -102,31 +185,60 @@ const CourseDetailPage: React.FC = () => {
 
                 <div className="p-6">
                   <div className="mb-6">
-                    {course.originalPrice && (
+                    {originalPrice && originalPrice > coursePrice && (
                       <div className="flex items-center space-x-2 mb-2">
                         <span className="text-gray-400 line-through text-lg">
-                          R$ {course.originalPrice.toFixed(2)}
+                          R$ {originalPrice.toFixed(2)}
                         </span>
                         <span className="bg-red-100 text-red-600 px-2 py-1 rounded text-sm font-bold">
-                          {Math.round(((course.originalPrice - course.price) / course.originalPrice) * 100)}% OFF
+                          {Math.round(((originalPrice - coursePrice) / originalPrice) * 100)}% OFF
                         </span>
                       </div>
                     )}
                     <p className="text-4xl font-bold text-gray-900">
-                      R$ {course.price.toFixed(2)}
+                      R$ {coursePrice.toFixed(2)}
                     </p>
-                    <p className="text-gray-600 text-sm mt-1">ou 12x de R$ {(course.price / 12).toFixed(2)}</p>
+                    <p className="text-gray-600 text-sm mt-1">ou 12x de R$ {(coursePrice / 12).toFixed(2)}</p>
                   </div>
 
                   <Link
-                    to={`/checkout/${course.id}`}
+                    to={`/checkout/${course.id}${affiliateCode ? `?ref=${affiliateCode}` : ''}`}
                     className="block w-full px-6 py-4 bg-gradient-to-r from-primary-600 to-secondary-600 text-white text-center rounded-lg font-bold text-lg hover:shadow-lg transition-all mb-3"
                   >
                     Comprar Agora
                   </Link>
 
-                  <button className="block w-full px-6 py-3 bg-gray-100 text-gray-900 text-center rounded-lg font-medium hover:bg-gray-200 transition-colors">
-                    Adicionar ao Carrinho
+                  <button
+                    onClick={() => {
+                      if (course) {
+                        addToCart(course);
+                        setAddedToCart(true);
+                        setTimeout(() => setAddedToCart(false), 2000);
+                      }
+                    }}
+                    disabled={isInCart(course.id) || addedToCart}
+                    className={`block w-full px-6 py-3 text-center rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${
+                      isInCart(course.id) || addedToCart
+                        ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                    }`}
+                  >
+                    {addedToCart ? (
+                      <>
+                        <Check className="w-5 h-5" />
+                        <span>Adicionado ao Carrinho!</span>
+                      </>
+                    ) : isInCart(course.id) ? (
+                      <>
+                        <Check className="w-5 h-5" />
+                        <span>Já está no Carrinho</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-5 h-5" />
+                        <span>Adicionar ao Carrinho</span>
+                      </>
+                    )}
                   </button>
 
                   <div className="mt-6 pt-6 border-t space-y-3">
@@ -199,6 +311,9 @@ const CourseDetailPage: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                  {course.modules.length === 0 && (
+                    <p className="text-gray-600">Conteúdo será adicionado em breve.</p>
+                  )}
                 </div>
               </div>
 

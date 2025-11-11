@@ -1,17 +1,69 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Play, CheckCircle, Lock, ChevronDown, ChevronUp, Menu, X, ArrowLeft, MessageSquare, FileText, BookOpen } from 'lucide-react';
-import { mockCourses } from '../data/mockData';
+import { Play, CheckCircle, Lock, ChevronDown, ChevronUp, Menu, X, ArrowLeft, BookOpen, FileText, MessageSquare } from 'lucide-react';
+import { learningAPI } from '../services/api';
 import { Course, Lesson, Module } from '../types';
 
 const CourseLearningPage: React.FC = () => {
-  const { courseId } = useParams();
-  const course = mockCourses.find(c => c.id === courseId) as Course;
-  
-  const [activeLesson, setActiveLesson] = useState<Lesson>(course.modules[0].lessons[0]);
-  const [openModules, setOpenModules] = useState<Set<string>>(new Set([course.modules[0].id]));
+  const { courseId } = useParams<{ courseId: string }>();
+  const [course, setCourse] = useState<Course | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const [openModules, setOpenModules] = useState<Set<string>>(new Set());
   const [isSidebarOpen, setSidebarOpen] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCompleting, setIsCompleting] = useState(false);
+
+  useEffect(() => {
+    const fetchCourse = async () => {
+      if (!courseId) return;
+
+      try {
+        setIsLoading(true);
+        const data = await learningAPI.getCourse(courseId);
+        
+        // Mapear os dados do backend para o formato do frontend
+        const mappedCourse: Course = {
+          id: data.course._id,
+          title: data.course.title,
+          description: data.course.description,
+          thumbnail: data.course.thumbnail,
+          price: data.course.price,
+          originalPrice: data.course.originalPrice,
+          instructor: data.course.instructor,
+          instructorAvatar: data.course.instructorAvatar,
+          rating: data.course.rating,
+          totalStudents: data.course.totalStudents,
+          duration: data.course.duration,
+          level: data.course.level,
+          category: data.course.category,
+          modules: data.course.modules || [],
+          features: data.course.features || []
+        };
+
+        setCourse(mappedCourse);
+        setProgress(data.enrollment.progress);
+
+        // Abrir primeiro módulo e definir primeira lição ativa
+        if (mappedCourse.modules.length > 0) {
+          const firstModule = mappedCourse.modules[0];
+          setOpenModules(new Set([firstModule.id]));
+          
+          if (firstModule.lessons.length > 0) {
+            const firstUnlockedLesson = firstModule.lessons.find(l => !l.locked) || firstModule.lessons[0];
+            setActiveLesson(firstUnlockedLesson);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar curso:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCourse();
+  }, [courseId]);
 
   const toggleModule = (moduleId: string) => {
     setOpenModules(prev => {
@@ -25,7 +77,59 @@ const CourseLearningPage: React.FC = () => {
     });
   };
 
-  const videoId = new URL(activeLesson.videoUrl).searchParams.get('v');
+  const handleCompleteLesson = async () => {
+    if (!courseId || !activeLesson) return;
+
+    // Encontrar o módulo da lição ativa
+    const module = course?.modules.find(m => m.lessons.some(l => l.id === activeLesson.id));
+    if (!module) return;
+
+    try {
+      setIsCompleting(true);
+      await learningAPI.completeLesson({
+        courseId,
+        moduleId: module.id,
+        lessonId: activeLesson.id
+      });
+
+      // Atualizar estado local
+      if (course) {
+        const updatedModules = course.modules.map(m => {
+          if (m.id === module.id) {
+            const updatedLessons = m.lessons.map(l => {
+              if (l.id === activeLesson.id) {
+                return { ...l, completed: true, locked: false };
+              }
+              return l;
+            });
+            return { ...m, lessons: updatedLessons };
+          }
+          return m;
+        });
+        setCourse({ ...course, modules: updatedModules });
+        setActiveLesson({ ...activeLesson, completed: true, locked: false });
+        
+        // Atualizar progresso
+        const totalLessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0);
+        const completedLessons = updatedModules.reduce((sum, m) => sum + m.lessons.filter(l => l.completed).length, 0);
+        setProgress(Math.round((completedLessons / totalLessons) * 100));
+      }
+    } catch (error) {
+      console.error('Erro ao completar lição:', error);
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
+  if (isLoading || !course) {
+    return (
+      <div className="h-screen w-screen bg-gray-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  const videoId = activeLesson?.videoUrl ? new URL(activeLesson.videoUrl).searchParams.get('v') : null;
 
   const SidebarContent = () => (
     <div className="bg-white h-full flex flex-col">
@@ -36,9 +140,9 @@ const CourseLearningPage: React.FC = () => {
         </Link>
         <h2 className="font-bold text-xl text-gray-900">{course.title}</h2>
         <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-          <div className="bg-primary-600 h-2 rounded-full" style={{ width: '45%' }}></div>
+          <div className="bg-primary-600 h-2 rounded-full transition-all" style={{ width: `${progress}%` }}></div>
         </div>
-        <p className="text-xs text-gray-500 mt-1">45% completo</p>
+        <p className="text-xs text-gray-500 mt-1">{progress}% completo</p>
       </div>
       <div className="flex-grow overflow-y-auto">
         {course.modules.map((module: Module) => (
@@ -67,10 +171,16 @@ const CourseLearningPage: React.FC = () => {
                       onClick={() => !lesson.locked && setActiveLesson(lesson)}
                       disabled={lesson.locked}
                       className={`w-full text-left p-4 pl-6 flex items-start space-x-3 text-sm transition-colors ${
-                        activeLesson.id === lesson.id ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50'
+                        activeLesson?.id === lesson.id ? 'bg-primary-50 text-primary-700' : 'hover:bg-gray-50'
                       } ${lesson.locked ? 'text-gray-400 cursor-not-allowed' : 'text-gray-700'}`}
                     >
-                      {lesson.completed ? <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" /> : (lesson.locked ? <Lock className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" /> : <Play className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />)}
+                      {lesson.completed ? (
+                        <CheckCircle className="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+                      ) : lesson.locked ? (
+                        <Lock className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      ) : (
+                        <Play className="w-5 h-5 text-gray-400 mt-0.5 flex-shrink-0" />
+                      )}
                       <span>{lesson.title}</span>
                       <span className="ml-auto text-xs text-gray-500 flex-shrink-0">{lesson.duration}</span>
                     </button>
@@ -106,45 +216,71 @@ const CourseLearningPage: React.FC = () => {
             {isSidebarOpen ? <X className="w-6 h-6 text-gray-600" /> : <Menu className="w-6 h-6 text-gray-600" />}
           </button>
           <div className="text-center">
-            <h1 className="text-lg font-semibold text-gray-900">{activeLesson.title}</h1>
+            <h1 className="text-lg font-semibold text-gray-900">{activeLesson?.title || 'Selecione uma lição'}</h1>
           </div>
-          <button className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 flex items-center space-x-2">
-            <CheckCircle className="w-4 h-4" />
-            <span>Marcar como concluída</span>
-          </button>
+          {activeLesson && !activeLesson.completed && !activeLesson.locked && (
+            <button
+              onClick={handleCompleteLesson}
+              disabled={isCompleting}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 flex items-center space-x-2 disabled:opacity-50"
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span>{isCompleting ? 'Marcando...' : 'Marcar como concluída'}</span>
+            </button>
+          )}
+          {activeLesson?.completed && (
+            <div className="px-4 py-2 bg-green-100 text-green-700 rounded-lg font-semibold text-sm flex items-center space-x-2">
+              <CheckCircle className="w-4 h-4" />
+              <span>Concluída</span>
+            </div>
+          )}
         </header>
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8">
-          <div className="aspect-video bg-black rounded-lg mb-6 shadow-xl">
-            <iframe
-              className="w-full h-full rounded-lg"
-              src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
-              title="YouTube video player"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            ></iframe>
-          </div>
+          {activeLesson ? (
+            <>
+              <div className="aspect-video bg-black rounded-lg mb-6 shadow-xl">
+                {videoId ? (
+                  <iframe
+                    className="w-full h-full rounded-lg"
+                    src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
+                    title="YouTube video player"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white">
+                    <p>Vídeo não disponível</p>
+                  </div>
+                )}
+              </div>
 
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex border-b mb-4">
-              <button className="py-3 px-4 text-primary-600 border-b-2 border-primary-600 font-semibold flex items-center space-x-2">
-                <BookOpen className="w-5 h-5" /><span>Sobre a aula</span>
-              </button>
-              <button className="py-3 px-4 text-gray-600 hover:text-gray-900 font-medium flex items-center space-x-2">
-                <FileText className="w-5 h-5" /><span>Recursos</span>
-              </button>
-              <button className="py-3 px-4 text-gray-600 hover:text-gray-900 font-medium flex items-center space-x-2">
-                <MessageSquare className="w-5 h-5" /><span>Comentários</span>
-              </button>
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <div className="flex border-b mb-4">
+                  <button className="py-3 px-4 text-primary-600 border-b-2 border-primary-600 font-semibold flex items-center space-x-2">
+                    <BookOpen className="w-5 h-5" /><span>Sobre a aula</span>
+                  </button>
+                  <button className="py-3 px-4 text-gray-600 hover:text-gray-900 font-medium flex items-center space-x-2">
+                    <FileText className="w-5 h-5" /><span>Recursos</span>
+                  </button>
+                  <button className="py-3 px-4 text-gray-600 hover:text-gray-900 font-medium flex items-center space-x-2">
+                    <MessageSquare className="w-5 h-5" /><span>Comentários</span>
+                  </button>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">Descrição</h3>
+                  <p className="text-gray-700 leading-relaxed">
+                    Nesta aula, vamos mergulhar nos conceitos fundamentais do React.js. Você aprenderá sobre o que é o React, por que ele se tornou tão popular e como ele pode ajudar a construir interfaces de usuário modernas e eficientes. Abordaremos a filosofia por trás da biblioteca, incluindo o Virtual DOM, componentes e o fluxo de dados unidirecional. Prepare-se para dar o primeiro passo na sua jornada para se tornar um desenvolvedor React!
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-gray-600">Selecione uma lição para começar</p>
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-gray-900 mb-4">Descrição</h3>
-              <p className="text-gray-700 leading-relaxed">
-                Nesta aula, vamos mergulhar nos conceitos fundamentais do React.js. Você aprenderá sobre o que é o React, por que ele se tornou tão popular e como ele pode ajudar a construir interfaces de usuário modernas e eficientes. Abordaremos a filosofia por trás da biblioteca, incluindo o Virtual DOM, componentes e o fluxo de dados unidirecional. Prepare-se para dar o primeiro passo na sua jornada para se tornar um desenvolvedor React!
-              </p>
-            </div>
-          </div>
+          )}
         </div>
       </main>
     </div>

@@ -12,7 +12,7 @@ const Footer: React.FC = () => {
               <div className="bg-gradient-to-r from-primary-600 to-secondary-600 p-2 rounded-lg">
                 <GraduationCap className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold text-white">EduPlus</span>
+              <span className="text-xl font-bold text-white">MindX</span>
             </Link>
             <p className="text-sm text-gray-400 mb-4">
               Transforme sua carreira com os melhores cursos online do mercado.
@@ -72,7 +72,7 @@ const Footer: React.FC = () => {
         </div>
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-          <p>&copy; 2025 EduPlus. Todos os direitos reservados.</p>
+          <p>&copy; 2025 MindX. Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>

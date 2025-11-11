@@ -9,9 +9,23 @@ interface CourseCardProps {
 }
 
 const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
-  const discount = course.originalPrice 
-    ? Math.round(((course.originalPrice - course.price) / course.originalPrice) * 100)
+  // Converter preços para números
+  const coursePrice = typeof course.price === 'number' ? course.price : parseFloat(course.price) || 0;
+  const originalPrice = course.originalPrice 
+    ? (typeof course.originalPrice === 'number' ? course.originalPrice : parseFloat(course.originalPrice) || 0)
+    : null;
+  
+  const discount = originalPrice && originalPrice > coursePrice
+    ? Math.round(((originalPrice - coursePrice) / originalPrice) * 100)
     : 0;
+
+  // Garantir que o ID existe antes de criar o link
+  const courseId = course.id || course._id;
+  
+  if (!courseId) {
+    console.error('CourseCard: curso sem ID', course);
+    return null; // Não renderiza se não tiver ID
+  }
 
   return (
     <motion.div
@@ -19,7 +33,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
       transition={{ duration: 0.3 }}
       className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow"
     >
-      <Link to={`/curso/${course.id}`}>
+      <Link to={`/curso/${courseId}`}>
         <div className="relative">
           <img
             src={course.thumbnail}
@@ -57,27 +71,27 @@ const CourseCard: React.FC<CourseCardProps> = ({ course }) => {
           <div className="flex items-center space-x-4 mb-4 text-sm text-gray-500">
             <div className="flex items-center space-x-1">
               <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-              <span className="font-medium text-gray-900">{course.rating}</span>
+              <span className="font-medium text-gray-900">{course.rating || '0.0'}</span>
             </div>
             <div className="flex items-center space-x-1">
               <Users className="w-4 h-4" />
-              <span>{course.totalStudents.toLocaleString('pt-BR')}</span>
+              <span>{(course.totalStudents || 0).toLocaleString('pt-BR')}</span>
             </div>
             <div className="flex items-center space-x-1">
               <Clock className="w-4 h-4" />
-              <span>{course.duration}</span>
+              <span>{course.duration || 'N/A'}</span>
             </div>
           </div>
 
           <div className="flex items-center justify-between">
             <div>
-              {course.originalPrice && (
+              {originalPrice && originalPrice > coursePrice && (
                 <span className="text-sm text-gray-400 line-through mr-2">
-                  R$ {course.originalPrice.toFixed(2)}
+                  R$ {originalPrice.toFixed(2)}
                 </span>
               )}
               <span className="text-2xl font-bold text-primary-600">
-                R$ {course.price.toFixed(2)}
+                R$ {coursePrice.toFixed(2)}
               </span>
             </div>
           </div>

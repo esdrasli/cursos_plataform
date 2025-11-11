@@ -14,6 +14,7 @@ export interface Course {
   category: string;
   modules: Module[];
   features: string[];
+  status?: 'draft' | 'published';
 }
 
 export interface Module {
@@ -63,12 +64,30 @@ export interface LandingPage {
   title: string;
   courseId: string;
   courseTitle: string;
-  lastUpdated: string;
+  lastUpdated?: string;
+  createdAt?: string;
   status: 'Publicada' | 'Rascunho';
   hero: {
     title: string;
     subtitle: string;
     cta: string;
     image: string;
+  };
+  sections?: any[];
+  layout?: {
+    heroLayout?: 'centered' | 'split' | 'minimal';
+    heroBackground?: 'gradient' | 'solid' | 'image';
+    colorScheme?: 'primary' | 'bold' | 'elegant' | 'vibrant';
+    colors?: {
+      primary: string;
+      secondary: string;
+      accent: string;
+      background: string;
+      text: string;
+    };
+    typography?: 'bold' | 'elegant' | 'modern';
+    spacing?: 'compact' | 'comfortable' | 'spacious';
+    ctaStyle?: 'small' | 'medium' | 'large';
+    ctaPosition?: 'left' | 'center' | 'right';
   };
 }

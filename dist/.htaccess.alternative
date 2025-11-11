@@ -1,0 +1,21 @@
+# Versão ALTERNATIVA - Compatível com Apache 2.2 e 2.4
+# Use esta se a versão principal não funcionar
+
+<IfModule mod_rewrite.c>
+  Options -MultiViews
+  RewriteEngine On
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^ index.html [QSA,L]
+</IfModule>
+
+# Permitir acesso (Apache 2.4)
+<IfModule mod_authz_core.c>
+  Require all granted
+</IfModule>
+
+# Permitir acesso (Apache 2.2)
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Allow from all
+</IfModule>
+
