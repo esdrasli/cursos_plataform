@@ -25,18 +25,27 @@ services:
       context: ./backend
       dockerfile: Dockerfile.dev
     container_name: cursos_backend_dev
-    env_file:
-      - ./backend/.env
     environment:
       NODE_ENV: development
       PORT: 3001
+      JWT_SECRET: ${JWT_SECRET:-super_secret_jwt_key_change_in_production}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: cursos_plataform
+      FRONTEND_URL: http://localhost:5173
     ports:
       - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - ./backend/src:/app/src
       - ./backend/package.json:/app/package.json
       - ./backend/tsconfig.json:/app/tsconfig.json
       - ./backend/.env:/app/.env
+      - ./backend/uploads:/app/uploads
       - /app/node_modules
     command: npm run dev
     networks:

@@ -13,6 +13,8 @@ import creatorRoutes from './routes/creator.routes.js';
 import learningRoutes from './routes/learning.routes.js';
 import affiliateRoutes from './routes/affiliate.routes.js';
 import configRoutes from './routes/config.routes.js';
+import brandingRoutes from './routes/branding.routes.js';
+import uploadRoutes from './routes/upload.routes.js';
 
 dotenv.config();
 
@@ -24,10 +26,17 @@ app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'stripe-signature']
 }));
+
+// Webhook do Stripe precisa de raw body (antes do express.json())
+app.use('/api/checkout/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Servir arquivos estáticos (uploads)
+app.use('/uploads', express.static('uploads'));
 
 // Conectar ao PostgreSQL
 let retryCount = 0;
@@ -83,6 +92,8 @@ app.use('/api/creator', creatorRoutes);
 app.use('/api/learning', learningRoutes);
 app.use('/api/affiliate', affiliateRoutes);
 app.use('/api/config', configRoutes);
+app.use('/api/branding', brandingRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Rota de health check
 app.get('/api/health', (_req: Request, res: Response) => {

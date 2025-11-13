@@ -2,9 +2,8 @@ import axios from 'axios';
 
 // Configuração da URL da API
 // IMPORTANTE: 
-// - Em desenvolvimento: usa localhost:3001 (Docker ou local)
+// - Em desenvolvimento: usa o proxy do Vite (/api) que redireciona para backend:3001
 // - Em produção: usa VITE_API_URL do .env.production
-// - No navegador, sempre usar localhost:3001, não o nome do serviço Docker
 const getApiUrl = () => {
   // 1. Se houver VITE_API_URL definida (produção), usar ela
   const envUrl = import.meta.env.VITE_API_URL;
@@ -12,16 +11,17 @@ const getApiUrl = () => {
   if (envUrl) {
     // Ignorar se contém nome de serviço Docker (não funciona no navegador)
     if (envUrl.includes('backend:') || envUrl.includes('backend/')) {
-      console.warn('⚠️ VITE_API_URL contém nome de serviço Docker, usando localhost:3001');
-      return 'http://localhost:3001/api';
+      console.warn('⚠️ VITE_API_URL contém nome de serviço Docker, usando proxy');
+      return '/api';
     }
     // URL válida para produção
     return envUrl;
   }
   
-  // 2. Em desenvolvimento (sem VITE_API_URL), usar localhost:3001
-  // Isso funciona tanto no Docker quanto localmente
-  return 'http://localhost:3001/api';
+  // 2. Em desenvolvimento (sem VITE_API_URL), usar o proxy do Vite
+  // O proxy redireciona /api para backend:3001 dentro do Docker
+  // Isso funciona perfeitamente no navegador
+  return '/api';
 };
 
 const API_URL = getApiUrl();
@@ -35,6 +35,9 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// Exportar api para uso em componentes de upload
+export { api };
 
 // Interceptor para adicionar token em todas as requisições
 api.interceptors.request.use(
@@ -143,17 +146,25 @@ export const coursesAPI = {
   },
 };
 
-// Checkout API
-export const checkoutAPI = {
-  getCourseInfo: async (courseId: string) => {
-    const response = await api.get(`/checkout/course/${courseId}`);
-    return response.data;
-  },
-  process: async (data: { courseId: string; paymentMethod: string; paymentData?: any; affiliateCode?: string }) => {
-    const response = await api.post('/checkout/process', data);
-    return response.data;
-  },
-};
+      // Checkout API
+      export const checkoutAPI = {
+        getCourseInfo: async (courseId: string) => {
+          const response = await api.get(`/checkout/course/${courseId}`);
+          return response.data;
+        },
+        process: async (data: { courseId: string; paymentMethod: string; paymentData?: any; affiliateCode?: string }) => {
+          const response = await api.post('/checkout/process', data);
+          return response.data;
+        },
+        createCheckoutSession: async (data: { courseId: string; affiliateCode?: string }) => {
+          const response = await api.post('/checkout/create-checkout-session', data);
+          return response.data;
+        },
+        getSessionStatus: async (sessionId: string) => {
+          const response = await api.get(`/checkout/session-status?session_id=${sessionId}`);
+          return response.data;
+        },
+      };
 
 // Affiliate API
 export const affiliateAPI = {
@@ -211,6 +222,26 @@ export const learningAPI = {
   },
   getProgress: async (courseId: string) => {
     const response = await api.get(`/learning/progress/${courseId}`);
+    return response.data;
+  },
+};
+
+// Branding API
+export const brandingAPI = {
+  getMyBranding: async () => {
+    const response = await api.get('/branding/me');
+    return response.data;
+  },
+  getBrandingByCreator: async (creatorId: string) => {
+    const response = await api.get(`/branding/creator/${creatorId}`);
+    return response.data;
+  },
+  updateBranding: async (data: any) => {
+    const response = await api.post('/branding/me', data);
+    return response.data;
+  },
+  uploadLogo: async (logoUrl: string, type: 'light' | 'dark' = 'light') => {
+    const response = await api.post('/branding/me/logo', { logoUrl, type });
     return response.data;
   },
 };

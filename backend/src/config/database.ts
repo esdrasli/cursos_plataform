@@ -9,6 +9,7 @@ import { LandingPage } from '../entities/LandingPage.js';
 import { Affiliate } from '../entities/Affiliate.js';
 import { AffiliateSale } from '../entities/AffiliateSale.js';
 import { AppConfig } from '../entities/AppConfig.js';
+import { Branding } from '../entities/Branding.js';
 
 dotenv.config();
 
@@ -19,9 +20,9 @@ export const AppDataSource = new DataSource({
   username: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_NAME || 'cursos_plataform',
-  synchronize: false, // Desabilitado - tabelas criadas manualmente via SQL
+  synchronize: process.env.NODE_ENV !== 'production', // Criar tabelas automaticamente em desenvolvimento
   logging: process.env.NODE_ENV === 'development',
-  entities: [User, Course, Enrollment, Sale, LandingPage, Affiliate, AffiliateSale, AppConfig],
+  entities: [User, Course, Enrollment, Sale, LandingPage, Affiliate, AffiliateSale, AppConfig, Branding],
   migrations: ['src/migrations/**/*.ts'],
   subscribers: ['src/subscribers/**/*.ts'],
   extra: {

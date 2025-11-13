@@ -1,4 +1,4 @@
-import express, { Response } from 'express';
+import express, { Request, Response } from 'express';
 import { AppDataSource } from '../config/database.js';
 import { AppConfig } from '../entities/AppConfig.js';
 import { authenticate } from '../middleware/auth.middleware.js';

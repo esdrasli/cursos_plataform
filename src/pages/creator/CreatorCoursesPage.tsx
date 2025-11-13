@@ -150,12 +150,20 @@ const CreatorCoursesPage: React.FC = () => {
                           </span>
                         </td>
                         <td className="p-4 text-right">
-                          <Link
-                            to={`/creator/courses/edit/${courseId}`}
-                            className="inline-block px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
-                          >
-                            Editar
-                          </Link>
+                          <div className="flex items-center justify-end space-x-2">
+                            <Link
+                              to={`/creator/courses/platform/${courseId}`}
+                              className="inline-block px-4 py-2 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors"
+                            >
+                              Personalizar Plataforma
+                            </Link>
+                            <Link
+                              to={`/creator/courses/edit/${courseId}`}
+                              className="inline-block px-4 py-2 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+                            >
+                              Editar
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     );

@@ -7,13 +7,22 @@ import { Affiliate } from '../entities/Affiliate.js';
 import { AffiliateSale } from '../entities/AffiliateSale.js';
 import { authenticate } from '../middleware/auth.middleware.js';
 import { AuthRequest } from '../types/index.js';
+import { paymentService } from '../services/payment.service.js';
+import Stripe from 'stripe';
 
 const router = express.Router();
 
 interface ProcessPaymentBody {
   courseId: string;
   paymentMethod: 'credit' | 'pix' | 'boleto';
-  paymentData?: any;
+  paymentData?: {
+    number?: string;
+    expiry?: string;
+    cvv?: string;
+    name?: string;
+    installments?: number;
+    document?: string;
+  };
   affiliateCode?: string; // Código do afiliado
 }
 
@@ -69,6 +78,38 @@ router.post('/process', authenticate, async (req: AuthRequest<{}, {}, ProcessPay
       });
     }
 
+    // Processar pagamento com gateway
+    const paymentResult = await paymentService.processPayment({
+      amount: Number(course.price),
+      description: `Compra do curso: ${course.title}`,
+      paymentMethod,
+      cardData: paymentMethod === 'credit' ? {
+        number: req.body.paymentData?.number || '',
+        expiry: req.body.paymentData?.expiry || '',
+        cvv: req.body.paymentData?.cvv || '',
+        name: req.body.paymentData?.name || '',
+        installments: req.body.paymentData?.installments || 1,
+      } : undefined,
+      customer: {
+        name: req.user.name,
+        email: req.user.email,
+        document: req.body.paymentData?.document,
+      },
+      metadata: {
+        courseId: course.id,
+        userId: req.user.id,
+        affiliateCode: affiliate?.affiliateCode,
+      },
+    });
+
+    if (!paymentResult.success) {
+      res.status(400).json({ 
+        message: paymentResult.error || 'Erro ao processar pagamento',
+        paymentResult 
+      });
+      return;
+    }
+
     // Criar registro de venda
     const sale = saleRepository.create({
       courseId: course.id,
@@ -78,8 +119,9 @@ router.post('/process', authenticate, async (req: AuthRequest<{}, {}, ProcessPay
       instructorId: course.instructorId,
       amount: Number(course.price),
       paymentMethod,
-      status: 'completed', // Em produção, isso seria verificado pela API de pagamento
-      transactionId: `TXN-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      status: paymentResult.status === 'approved' ? 'completed' : 
+              paymentResult.status === 'pending' ? 'pending' : 'failed',
+      transactionId: paymentResult.transactionId,
       affiliateCode: affiliate ? affiliate.affiliateCode : undefined,
     });
     
@@ -111,22 +153,56 @@ router.post('/process', authenticate, async (req: AuthRequest<{}, {}, ProcessPay
       await affiliateRepository.save(affiliate);
     }
     
-    // Criar matrícula
-    const enrollment = enrollmentRepository.create({
-      userId: req.user.id,
-      courseId: course.id
-    });
-    
-    await enrollmentRepository.save(enrollment);
-    
-    // Atualizar contador de alunos do curso
-    course.totalStudents += 1;
-    await courseRepository.save(course);
+    // Se pagamento foi aprovado, criar matrícula imediatamente
+    // Se estiver pendente (PIX/Boleto), criar matrícula será feito via webhook
+    let enrollment = null;
+    if (paymentResult.status === 'approved') {
+      enrollment = enrollmentRepository.create({
+        userId: req.user.id,
+        courseId: course.id
+      });
+      
+      await enrollmentRepository.save(enrollment);
+      
+      // Atualizar contador de alunos do curso
+      course.totalStudents += 1;
+      await courseRepository.save(course);
+    }
+
+    // Retornar resposta baseada no método de pagamento
+    if (paymentMethod === 'pix' && paymentResult.pixCode) {
+      res.status(201).json({
+        message: 'Pagamento PIX criado. Escaneie o QR Code para finalizar.',
+        sale,
+        payment: {
+          qrCode: paymentResult.qrCode,
+          qrCodeBase64: paymentResult.qrCodeBase64,
+          pixCode: paymentResult.pixCode,
+        },
+        status: 'pending'
+      });
+      return;
+    }
+
+    if (paymentMethod === 'boleto' && paymentResult.boletoUrl) {
+      res.status(201).json({
+        message: 'Boleto gerado. Pague até a data de vencimento.',
+        sale,
+        payment: {
+          boletoUrl: paymentResult.boletoUrl,
+        },
+        status: 'pending'
+      });
+      return;
+    }
     
     res.status(201).json({
-      message: 'Pagamento processado com sucesso',
+      message: paymentResult.status === 'approved' 
+        ? 'Pagamento processado com sucesso' 
+        : 'Pagamento em processamento',
       sale,
-      enrollment
+      enrollment,
+      status: paymentResult.status
     });
   } catch (error: any) {
     console.error('Erro ao processar pagamento:', error);
@@ -158,6 +234,278 @@ router.get('/course/:courseId', async (req: Request<{ courseId: string }>, res: 
   } catch (error: any) {
     console.error('Erro ao buscar informações do checkout:', error);
     res.status(500).json({ message: 'Erro ao buscar informações', error: error.message });
+  }
+});
+
+// Criar Checkout Session do Stripe (embedded)
+router.post('/create-checkout-session', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: 'Usuário não autenticado' });
+      return;
+    }
+
+    const { courseId, affiliateCode } = req.body;
+    
+    if (!courseId) {
+      res.status(400).json({ message: 'courseId é obrigatório' });
+      return;
+    }
+
+    const stripeKey = process.env.STRIPE_SECRET_KEY || process.env.PAYMENT_API_KEY;
+    if (!stripeKey) {
+      res.status(500).json({ message: 'Stripe não configurado' });
+      return;
+    }
+
+    const stripe = new Stripe(stripeKey, {
+      apiVersion: '2024-11-20.acacia',
+    });
+
+    const courseRepository = AppDataSource.getRepository(Course);
+    const course = await courseRepository.findOne({ where: { id: courseId } });
+    
+    if (!course) {
+      res.status(404).json({ message: 'Curso não encontrado' });
+      return;
+    }
+
+    // Verificar se o usuário já está matriculado
+    const enrollmentRepository = AppDataSource.getRepository(Enrollment);
+    const existingEnrollment = await enrollmentRepository.findOne({
+      where: {
+        userId: req.user.id,
+        courseId: course.id
+      }
+    });
+    
+    if (existingEnrollment) {
+      res.status(400).json({ message: 'Você já está matriculado neste curso' });
+      return;
+    }
+
+    const amountInCents = Math.round(Number(course.price) * 100);
+    
+    // Validar valor mínimo (Stripe requer pelo menos 0.50 BRL)
+    if (amountInCents < 50) {
+      res.status(400).json({ 
+        message: 'Valor do curso muito baixo. O valor mínimo é R$ 0,50.',
+        error: 'INVALID_AMOUNT'
+      });
+      return;
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+
+    // Validar URL da thumbnail
+    const thumbnailUrl = course.thumbnail && course.thumbnail.trim() 
+      ? [course.thumbnail] 
+      : undefined;
+
+    // Criar Checkout Session
+    const session = await stripe.checkout.sessions.create({
+      ui_mode: 'embedded',
+      line_items: [
+        {
+          price_data: {
+            currency: 'brl',
+            product_data: {
+              name: course.title.substring(0, 500), // Limitar tamanho
+              description: course.description ? course.description.substring(0, 500) : 'Curso online',
+              images: thumbnailUrl,
+            },
+            unit_amount: amountInCents,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      return_url: `${frontendUrl}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+      customer_email: req.user.email,
+      metadata: {
+        courseId: course.id,
+        userId: req.user.id,
+        affiliateCode: affiliateCode || '',
+      },
+      payment_method_types: ['card'], // Especificar métodos de pagamento
+    });
+
+    if (!session.client_secret) {
+      throw new Error('Client secret não foi retornado pelo Stripe');
+    }
+
+    res.json({ clientSecret: session.client_secret });
+  } catch (error: any) {
+    console.error('Erro ao criar checkout session:', error);
+    console.error('Detalhes do erro:', {
+      type: error.type,
+      code: error.code,
+      message: error.message,
+      raw: error.raw
+    });
+    
+    // Mensagem de erro mais específica
+    let errorMessage = 'Erro ao criar sessão de checkout';
+    if (error.type === 'StripeInvalidRequestError') {
+      errorMessage = `Erro na requisição ao Stripe: ${error.message}`;
+    } else if (error.code === 'resource_missing') {
+      errorMessage = 'Recurso não encontrado no Stripe';
+    }
+    
+    res.status(500).json({ 
+      message: errorMessage, 
+      error: error.message,
+      code: error.code,
+      type: error.type
+    });
+  }
+});
+
+// Verificar status da sessão de checkout
+router.get('/session-status', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: 'Usuário não autenticado' });
+      return;
+    }
+
+    const { session_id } = req.query;
+    
+    if (!session_id || typeof session_id !== 'string') {
+      res.status(400).json({ message: 'session_id é obrigatório' });
+      return;
+    }
+
+    const stripeKey = process.env.STRIPE_SECRET_KEY || process.env.PAYMENT_API_KEY;
+    if (!stripeKey) {
+      res.status(500).json({ message: 'Stripe não configurado' });
+      return;
+    }
+
+    const stripe = new Stripe(stripeKey, {
+      apiVersion: '2024-11-20.acacia',
+    });
+
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+
+    res.json({
+      status: session.status,
+      customer_email: session.customer_details?.email,
+      payment_status: session.payment_status,
+      metadata: session.metadata,
+    });
+  } catch (error: any) {
+    console.error('Erro ao verificar status da sessão:', error);
+    res.status(500).json({ message: 'Erro ao verificar status', error: error.message });
+  }
+});
+
+// Webhook para receber notificações de pagamento
+// IMPORTANTE: Esta rota recebe raw body (Buffer) quando configurada no server.ts
+router.post('/webhook', async (req: Request, res: Response) => {
+  try {
+    // Para Stripe, precisamos do raw body (Buffer) e signature
+    const signature = req.headers['stripe-signature'] as string;
+    // O body já vem como Buffer quando a rota é registrada com express.raw()
+    const rawBody = Buffer.isBuffer(req.body) ? req.body : Buffer.from(JSON.stringify(req.body));
+    const webhookData = await paymentService.handleWebhook(rawBody, signature);
+    
+    if (!webhookData) {
+      res.status(400).json({ message: 'Webhook inválido' });
+      return;
+    }
+
+    const saleRepository = AppDataSource.getRepository(Sale);
+    const enrollmentRepository = AppDataSource.getRepository(Enrollment);
+    const courseRepository = AppDataSource.getRepository(Course);
+    const affiliateRepository = AppDataSource.getRepository(Affiliate);
+    const affiliateSaleRepository = AppDataSource.getRepository(AffiliateSale);
+
+    // Buscar venda pela transactionId
+    const sale = await saleRepository.findOne({ 
+      where: { transactionId: webhookData.transactionId } 
+    });
+
+    if (!sale) {
+      res.status(404).json({ message: 'Venda não encontrada' });
+      return;
+    }
+
+    // Atualizar status da venda
+    const oldStatus = sale.status;
+    sale.status = webhookData.status === 'approved' ? 'completed' : 
+                  webhookData.status === 'rejected' ? 'failed' : 
+                  webhookData.status === 'refunded' ? 'refunded' : sale.status;
+    
+    await saleRepository.save(sale);
+
+    // Se pagamento foi aprovado e ainda não há matrícula, criar
+    if (webhookData.status === 'approved' && oldStatus !== 'completed') {
+      const existingEnrollment = await enrollmentRepository.findOne({
+        where: {
+          userId: sale.studentId,
+          courseId: sale.courseId
+        }
+      });
+
+      if (!existingEnrollment) {
+        const enrollment = enrollmentRepository.create({
+          userId: sale.studentId,
+          courseId: sale.courseId
+        });
+        
+        await enrollmentRepository.save(enrollment);
+
+        // Atualizar contador de alunos
+        const course = await courseRepository.findOne({ where: { id: sale.courseId } });
+        if (course) {
+          course.totalStudents += 1;
+          await courseRepository.save(course);
+        }
+
+        // Processar comissão do afiliado se houver
+        if (sale.affiliateCode) {
+          const affiliate = await affiliateRepository.findOne({
+            where: { affiliateCode: sale.affiliateCode, status: 'active' }
+          });
+
+          if (affiliate) {
+            const commissionRate = parseFloat(affiliate.commissionRate.toString()) / 100;
+            const commissionAmount = Number(sale.amount) * commissionRate;
+
+            const existingAffiliateSale = await affiliateSaleRepository.findOne({
+              where: { saleId: sale.id }
+            });
+
+            if (!existingAffiliateSale) {
+              const affiliateSale = affiliateSaleRepository.create({
+                affiliateId: affiliate.id,
+                saleId: sale.id,
+                courseId: sale.courseId,
+                studentId: sale.studentId,
+                saleAmount: Number(sale.amount),
+                commissionRate: affiliate.commissionRate,
+                commissionAmount,
+                status: 'approved',
+              });
+
+              await affiliateSaleRepository.save(affiliateSale);
+
+              // Atualizar estatísticas do afiliado
+              affiliate.totalSales += 1;
+              affiliate.totalEarnings = parseFloat(affiliate.totalEarnings.toString()) + commissionAmount;
+              affiliate.pendingEarnings = parseFloat(affiliate.pendingEarnings.toString()) + commissionAmount;
+              await affiliateRepository.save(affiliate);
+            }
+          }
+        }
+      }
+    }
+
+    res.status(200).json({ message: 'Webhook processado com sucesso' });
+  } catch (error: any) {
+    console.error('Erro ao processar webhook:', error);
+    res.status(500).json({ message: 'Erro ao processar webhook', error: error.message });
   }
 });
 

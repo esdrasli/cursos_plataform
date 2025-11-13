@@ -103,20 +103,82 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
       return;
     }
     
-    const courseRepository = AppDataSource.getRepository(Course);
-    const course = courseRepository.create({
-      ...req.body,
+    // Validar e truncar campos se necessário para evitar erro 22001
+    const courseData: any = {
+      title: (req.body.title || '').substring(0, 255),
+      description: req.body.description || '',
+      thumbnail: (req.body.thumbnail || '').substring(0, 500),
+      price: parseFloat(req.body.price) || 0,
+      originalPrice: req.body.originalPrice ? parseFloat(req.body.originalPrice) : null,
+      category: (req.body.category || '').substring(0, 100),
+      level: req.body.level || 'Iniciante',
+      duration: (req.body.duration || '').substring(0, 100),
+      features: Array.isArray(req.body.features) ? req.body.features : [],
+      modules: Array.isArray(req.body.modules) ? req.body.modules : [],
+      status: req.body.status || 'draft',
       instructorId: req.user.id,
-      instructor: req.user.name,
-      instructorAvatar: req.user.avatar
-    });
+      instructor: (req.user.name || '').substring(0, 255),
+      instructorAvatar: (req.user.avatar || 'https://i.pravatar.cc/150?img=1').substring(0, 500),
+      // Campos opcionais JSONB
+      sections: req.body.sections || null,
+      platformConfig: req.body.platformConfig || null,
+      customization: req.body.customization || null,
+    };
+    
+    // Validar campos obrigatórios
+    if (!courseData.title?.trim()) {
+      res.status(400).json({ message: 'Título do curso é obrigatório' });
+      return;
+    }
+    if (!courseData.description?.trim()) {
+      res.status(400).json({ message: 'Descrição do curso é obrigatória' });
+      return;
+    }
+    if (!courseData.thumbnail?.trim()) {
+      res.status(400).json({ message: 'URL da thumbnail é obrigatória' });
+      return;
+    }
+    if (!courseData.category?.trim()) {
+      res.status(400).json({ message: 'Categoria é obrigatória' });
+      return;
+    }
+    
+    const courseRepository = AppDataSource.getRepository(Course);
+    const course = courseRepository.create(courseData);
     
     await courseRepository.save(course);
     
     res.status(201).json(course);
   } catch (error: any) {
     console.error('Erro ao criar curso:', error);
-    res.status(500).json({ message: 'Erro ao criar curso', error: error.message });
+    console.error('Detalhes do erro:', {
+      code: error.code,
+      message: error.message,
+      detail: error.detail,
+      column: error.column,
+      table: error.table,
+      constraint: error.constraint
+    });
+    
+    // Mensagem de erro mais específica
+    if (error.code === '22001') {
+      res.status(400).json({ 
+        message: 'Um dos campos excede o tamanho máximo permitido. Verifique: título (255), thumbnail (500), categoria (100) ou duração (100).',
+        error: error.message,
+        column: error.column
+      });
+    } else if (error.code === '23502') {
+      res.status(400).json({ 
+        message: 'Campo obrigatório não preenchido.',
+        error: error.message,
+        column: error.column
+      });
+    } else {
+      res.status(500).json({ 
+        message: 'Erro ao criar curso', 
+        error: error.message 
+      });
+    }
   }
 });
 

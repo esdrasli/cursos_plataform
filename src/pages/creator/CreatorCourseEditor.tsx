@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Plus, Trash2, X, Video, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, X, Video, ChevronDown, ChevronUp, Palette, Eye } from 'lucide-react';
 import { coursesAPI } from '../../services/api';
 import { Course, Module, Lesson } from '../../types';
 import VideoInput from '../../components/VideoInput';
@@ -29,6 +29,7 @@ const CreatorCourseEditor: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
   const [expandedLessons, setExpandedLessons] = useState<Set<string>>(new Set());
+  const [showCustomization, setShowCustomization] = useState(false);
 
   useEffect(() => {
     if (courseId) {
@@ -54,7 +55,8 @@ const CreatorCourseEditor: React.FC = () => {
         duration: course.duration || '',
         features: course.features || [],
         modules: course.modules || [],
-        status: course.status || 'draft'
+        status: course.status || 'draft',
+        customization: course.customization || undefined
       });
     } catch (error: any) {
       console.error('Erro ao carregar curso:', error);
@@ -523,6 +525,341 @@ const CreatorCourseEditor: React.FC = () => {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Personalização Visual */}
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-3">
+              <Palette className="w-6 h-6 text-primary-600" />
+              <h2 className="text-xl font-bold">Personalização Visual</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowCustomization(!showCustomization)}
+              className="flex items-center space-x-2 px-4 py-2 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+            >
+              <Eye className="w-5 h-5" />
+              <span>{showCustomization ? 'Ocultar' : 'Mostrar'}</span>
+            </button>
+          </div>
+
+          {showCustomization && (
+            <div className="space-y-6">
+              {/* Cores */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Cores</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { key: 'primary', label: 'Primária' },
+                    { key: 'secondary', label: 'Secundária' },
+                    { key: 'accent', label: 'Destaque' },
+                    { key: 'background', label: 'Fundo' },
+                    { key: 'text', label: 'Texto' },
+                    { key: 'button', label: 'Botão' },
+                    { key: 'buttonText', label: 'Texto Botão' },
+                    { key: 'header', label: 'Cabeçalho' },
+                  ].map(({ key, label }) => (
+                    <div key={key}>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="color"
+                          value={courseData.customization?.colors?.[key as keyof typeof courseData.customization.colors] || '#4F46E5'}
+                          onChange={(e) => {
+                            const newCustomization = {
+                              ...courseData.customization,
+                              colors: {
+                                ...courseData.customization?.colors,
+                                [key]: e.target.value
+                              }
+                            };
+                            setCourseData(prev => ({ ...prev, customization: newCustomization }));
+                          }}
+                          className="w-12 h-10 border border-gray-300 rounded cursor-pointer"
+                        />
+                        <input
+                          type="text"
+                          value={courseData.customization?.colors?.[key as keyof typeof courseData.customization.colors] || '#4F46E5'}
+                          onChange={(e) => {
+                            const newCustomization = {
+                              ...courseData.customization,
+                              colors: {
+                                ...courseData.customization?.colors,
+                                [key]: e.target.value
+                              }
+                            };
+                            setCourseData(prev => ({ ...prev, customization: newCustomization }));
+                          }}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                          placeholder="#000000"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Tipografia */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Tipografia</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Fonte Principal</label>
+                    <select
+                      value={courseData.customization?.typography?.fontFamily || 'Inter'}
+                      onChange={(e) => {
+                        const newCustomization = {
+                          ...courseData.customization,
+                          typography: {
+                            ...courseData.customization?.typography,
+                            fontFamily: e.target.value
+                          }
+                        };
+                        setCourseData(prev => ({ ...prev, customization: newCustomization }));
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    >
+                      <option value="Inter">Inter</option>
+                      <option value="Roboto">Roboto</option>
+                      <option value="Poppins">Poppins</option>
+                      <option value="Montserrat">Montserrat</option>
+                      <option value="Open Sans">Open Sans</option>
+                      <option value="Lato">Lato</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Fonte para Títulos</label>
+                    <select
+                      value={courseData.customization?.typography?.headingFont || courseData.customization?.typography?.fontFamily || 'Inter'}
+                      onChange={(e) => {
+                        const newCustomization = {
+                          ...courseData.customization,
+                          typography: {
+                            ...courseData.customization?.typography,
+                            headingFont: e.target.value
+                          }
+                        };
+                        setCourseData(prev => ({ ...prev, customization: newCustomization }));
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    >
+                      <option value="Inter">Inter</option>
+                      <option value="Roboto">Roboto</option>
+                      <option value="Poppins">Poppins</option>
+                      <option value="Montserrat">Montserrat</option>
+                      <option value="Open Sans">Open Sans</option>
+                      <option value="Lato">Lato</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Layout */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Layout</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Estilo do Cabeçalho</label>
+                    <select
+                      value={courseData.customization?.layout?.headerStyle || 'default'}
+                      onChange={(e) => {
+                        const newCustomization = {
+                          ...courseData.customization,
+                          layout: {
+                            ...courseData.customization?.layout,
+                            headerStyle: e.target.value as any
+                          }
+                        };
+                        setCourseData(prev => ({ ...prev, customization: newCustomization }));
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    >
+                      <option value="default">Padrão</option>
+                      <option value="minimal">Minimalista</option>
+                      <option value="centered">Centralizado</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Estilo dos Botões</label>
+                    <select
+                      value={courseData.customization?.layout?.buttonStyle || 'rounded'}
+                      onChange={(e) => {
+                        const newCustomization = {
+                          ...courseData.customization,
+                          layout: {
+                            ...courseData.customization?.layout,
+                            buttonStyle: e.target.value as any
+                          }
+                        };
+                        setCourseData(prev => ({ ...prev, customization: newCustomization }));
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    >
+                      <option value="rounded">Arredondado</option>
+                      <option value="square">Quadrado</option>
+                      <option value="pill">Pílula</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Background */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Background</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                    <select
+                      value={courseData.customization?.background?.type || 'color'}
+                      onChange={(e) => {
+                        const newCustomization = {
+                          ...courseData.customization,
+                          background: {
+                            ...courseData.customization?.background,
+                            type: e.target.value as any
+                          }
+                        };
+                        setCourseData(prev => ({ ...prev, customization: newCustomization }));
+                      }}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    >
+                      <option value="color">Cor Sólida</option>
+                      <option value="gradient">Gradiente</option>
+                      <option value="image">Imagem</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {courseData.customization?.background?.type === 'image' ? 'URL da Imagem' : 
+                       courseData.customization?.background?.type === 'gradient' ? 'Gradiente (ex: linear-gradient(45deg, #667eea, #764ba2))' :
+                       'Cor'}
+                    </label>
+                    <input
+                      type="text"
+                      value={courseData.customization?.background?.value || ''}
+                      onChange={(e) => {
+                        const newCustomization = {
+                          ...courseData.customization,
+                          background: {
+                            ...courseData.customization?.background,
+                            value: e.target.value
+                          }
+                        };
+                        setCourseData(prev => ({ ...prev, customization: newCustomization }));
+                      }}
+                      placeholder={courseData.customization?.background?.type === 'image' ? 'https://...' : 
+                                   courseData.customization?.background?.type === 'gradient' ? 'linear-gradient(...)' :
+                                   '#FFFFFF'}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Elementos Visuais */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4">Elementos Visuais</h3>
+                <div className="space-y-2">
+                  {[
+                    { key: 'showProgressBar', label: 'Mostrar Barra de Progresso' },
+                    { key: 'showModuleNumbers', label: 'Mostrar Números dos Módulos' },
+                    { key: 'showLessonDuration', label: 'Mostrar Duração das Aulas' },
+                    { key: 'showInstructorInfo', label: 'Mostrar Informações do Instrutor' },
+                  ].map(({ key, label }) => (
+                    <label key={key} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={courseData.customization?.elements?.[key as keyof typeof courseData.customization.elements] !== false}
+                        onChange={(e) => {
+                          const newCustomization = {
+                            ...courseData.customization,
+                            elements: {
+                              ...courseData.customization?.elements,
+                              [key]: e.target.checked
+                            }
+                          };
+                          setCourseData(prev => ({ ...prev, customization: newCustomization }));
+                        }}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      />
+                      <span className="text-sm text-gray-700">{label}</span>
+                    </label>
+                  ))}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Logo Personalizado (URL)</label>
+                    <input
+                      type="text"
+                      value={courseData.customization?.elements?.customLogo || ''}
+                      onChange={(e) => {
+                        const newCustomization = {
+                          ...courseData.customization,
+                          elements: {
+                            ...courseData.customization?.elements,
+                            customLogo: e.target.value
+                          }
+                        };
+                        setCourseData(prev => ({ ...prev, customization: newCustomization }));
+                      }}
+                      placeholder="https://..."
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview */}
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <h3 className="font-semibold mb-4">Preview</h3>
+                <div 
+                  className="p-6 rounded-lg"
+                  style={{
+                    backgroundColor: courseData.customization?.background?.type === 'color' 
+                      ? courseData.customization?.background?.value || '#FFFFFF'
+                      : 'transparent',
+                    backgroundImage: courseData.customization?.background?.type === 'image'
+                      ? `url(${courseData.customization?.background?.value})`
+                      : courseData.customization?.background?.type === 'gradient'
+                      ? courseData.customization?.background?.value
+                      : 'none',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    fontFamily: courseData.customization?.typography?.fontFamily || 'Inter',
+                  }}
+                >
+                  <h2 
+                    className="text-2xl font-bold mb-2"
+                    style={{ 
+                      color: courseData.customization?.colors?.text || '#1F2937',
+                      fontFamily: courseData.customization?.typography?.headingFont || courseData.customization?.typography?.fontFamily || 'Inter'
+                    }}
+                  >
+                    {courseData.title || 'Título do Curso'}
+                  </h2>
+                  <p 
+                    className="mb-4"
+                    style={{ color: courseData.customization?.colors?.textSecondary || '#6B7280' }}
+                  >
+                    Preview da personalização visual
+                  </p>
+                  <button
+                    type="button"
+                    className={`px-6 py-3 font-semibold text-white ${
+                      courseData.customization?.layout?.buttonStyle === 'pill' ? 'rounded-full' :
+                      courseData.customization?.layout?.buttonStyle === 'square' ? 'rounded-none' :
+                      'rounded-lg'
+                    }`}
+                    style={{
+                      backgroundColor: courseData.customization?.colors?.button || courseData.customization?.colors?.primary || '#4F46E5',
+                      color: courseData.customization?.colors?.buttonText || '#FFFFFF'
+                    }}
+                  >
+                    Botão de Ação
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </form>
     </div>

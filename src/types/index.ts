@@ -15,6 +15,53 @@ export interface Course {
   modules: Module[];
   features: string[];
   status?: 'draft' | 'published';
+  customization?: any;
+  sections?: Array<{
+    id: string;
+    type: 'banner' | 'modules' | 'features' | 'instructor' | 'testimonials' | 'cta' | 'text' | 'video';
+    order: number;
+    data: any;
+    visible?: boolean;
+  }>;
+  platformConfig?: {
+    headerBanner?: {
+      image?: string | {
+        url: string;
+        scale?: number;
+        position?: { x: number; y: number };
+        crop?: { x: number; y: number; width: number; height: number };
+        rotation?: number;
+      };
+      title?: string;
+      subtitle?: string;
+      show?: boolean;
+    };
+    logo?: string;
+    logoDark?: string;
+    background?: {
+      type?: 'color' | 'image' | 'gradient';
+      color?: string;
+      image?: string;
+      gradient?: string;
+    };
+    theme?: 'light' | 'dark';
+    memberAreaName?: string;
+    customDomain?: string;
+    sidebar?: {
+      logo?: string;
+      backgroundColor?: string;
+      textColor?: string;
+      menuItems?: Array<{
+        id: string;
+        label: string;
+        icon?: string;
+        url?: string;
+        visible?: boolean;
+      }>;
+    };
+    shareImage?: string;
+    coverImage?: string;
+  };
 }
 
 export interface Module {

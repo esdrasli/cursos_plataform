@@ -10,6 +10,7 @@
     "dev": "tsx watch src/server.ts",
     "seed": "tsx src/seed.ts",
     "init-db": "tsx src/scripts/initDatabase.ts",
+    "create-tables": "tsx src/scripts/createTables.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -20,14 +21,18 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "express": "^4.18.2",
+    "@types/multer": "^2.0.0",
+    "axios": "^1.13.2",
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
+    "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
-    "bcryptjs": "^2.4.3",
+    "multer": "^2.0.2",
     "pg": "^8.11.3",
-    "typeorm": "^0.3.17",
     "reflect-metadata": "^0.1.14",
+    "stripe": "^19.3.1",
+    "typeorm": "^0.3.17",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
@@ -42,4 +47,3 @@
     "typescript": "^5.3.3"
   }
 }
-

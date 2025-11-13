@@ -4,6 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, CheckCircle, Lock, ChevronDown, ChevronUp, Menu, X, ArrowLeft, BookOpen, FileText, MessageSquare } from 'lucide-react';
 import { learningAPI } from '../services/api';
 import { Course, Lesson, Module } from '../types';
+import { useCourseCustomization } from '../hooks/useCourseCustomization';
+import CourseSections from '../components/course/CourseSections';
+import LearningPlatformLayout from '../components/course/LearningPlatformLayout';
 
 const CourseLearningPage: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
@@ -39,7 +42,10 @@ const CourseLearningPage: React.FC = () => {
           level: data.course.level,
           category: data.course.category,
           modules: data.course.modules || [],
-          features: data.course.features || []
+          features: data.course.features || [],
+          customization: data.course.customization,
+          sections: data.course.sections,
+          platformConfig: data.course.platformConfig
         };
 
         setCourse(mappedCourse);
@@ -121,15 +127,32 @@ const CourseLearningPage: React.FC = () => {
     }
   };
 
+  const customization = useCourseCustomization(course?.customization);
+  
+  // Verificar se há configurações da plataforma
+  const hasPlatformConfig = course?.platformConfig && Object.keys(course.platformConfig).length > 0;
+  
+  // Verificar se há seções personalizadas
+  const hasCustomSections = course?.sections && course.sections.length > 0;
+
+  // Extrair videoId se houver lição ativa
+  const videoId = activeLesson?.videoUrl ? new URL(activeLesson.videoUrl).searchParams.get('v') : null;
+
   if (isLoading || !course) {
     return (
-      <div className="h-screen w-screen bg-gray-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div 
+        className="h-screen w-screen flex items-center justify-center"
+        style={{
+          backgroundColor: course?.customization?.colors?.background || '#F3F4F6',
+        }}
+      >
+        <div 
+          className="animate-spin rounded-full h-12 w-12 border-b-2"
+          style={{ borderColor: course?.customization?.colors?.primary || '#4F46E5' }}
+        ></div>
       </div>
     );
   }
-
-  const videoId = activeLesson?.videoUrl ? new URL(activeLesson.videoUrl).searchParams.get('v') : null;
 
   const SidebarContent = () => (
     <div className="bg-white h-full flex flex-col">
@@ -138,10 +161,23 @@ const CourseLearningPage: React.FC = () => {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar ao Dashboard
         </Link>
-        <h2 className="font-bold text-xl text-gray-900">{course.title}</h2>
-        <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
-          <div className="bg-primary-600 h-2 rounded-full transition-all" style={{ width: `${progress}%` }}></div>
-        </div>
+        <h2 
+          className="font-bold text-xl"
+          style={customization.getHeadingStyle()}
+        >
+          {course.title}
+        </h2>
+        {course.customization?.elements?.showProgressBar !== false && (
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+            <div 
+              className="h-2 rounded-full transition-all"
+              style={{ 
+                width: `${progress}%`,
+                backgroundColor: course.customization?.colors?.primary || '#4F46E5'
+              }}
+            ></div>
+          </div>
+        )}
         <p className="text-xs text-gray-500 mt-1">{progress}% completo</p>
       </div>
       <div className="flex-grow overflow-y-auto">
@@ -194,8 +230,167 @@ const CourseLearningPage: React.FC = () => {
     </div>
   );
 
+  // Se houver configurações da plataforma, usar layout personalizado
+  if (hasPlatformConfig) {
+    return (
+      <LearningPlatformLayout
+        course={course}
+        progress={progress}
+        activeLesson={activeLesson}
+        openModules={openModules}
+        onToggleModule={toggleModule}
+        onSelectLesson={(lesson) => !lesson.locked && setActiveLesson(lesson)}
+        videoId={videoId}
+        onCompleteLesson={handleCompleteLesson}
+        isCompleting={isCompleting}
+      />
+    );
+  }
+
+  // Se houver seções personalizadas, renderizar layout com seções
+  if (hasCustomSections) {
+    return (
+      <div 
+        className="min-h-screen"
+        style={{
+          ...customization.getBackgroundStyle(),
+          backgroundColor: course?.customization?.background?.type !== 'image' && course?.customization?.background?.type !== 'gradient'
+            ? (course?.customization?.colors?.background || '#F3F4F6')
+            : undefined,
+        }}
+      >
+        <CourseSections course={course} sections={course.sections} />
+        
+        {/* Área de aprendizado abaixo das seções personalizadas */}
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <div className="grid lg:grid-cols-4 gap-6">
+            {/* Sidebar de módulos */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-lg shadow-sm p-4 sticky top-4">
+                <h3 className="font-bold text-lg mb-4" style={customization.getHeadingStyle()}>
+                  {course.title}
+                </h3>
+                {course.customization?.elements?.showProgressBar !== false && (
+                  <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+                    <div 
+                      className="h-2 rounded-full transition-all"
+                      style={{ 
+                        width: `${progress}%`,
+                        backgroundColor: course.customization?.colors?.primary || '#4F46E5'
+                      }}
+                    />
+                  </div>
+                )}
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {course.modules.map((module: Module) => (
+                    <div key={module.id} className="border-b pb-2">
+                      <h4 className="font-semibold text-sm mb-2" style={customization.getHeadingStyle()}>
+                        {module.title}
+                      </h4>
+                      <div className="space-y-1">
+                        {module.lessons.map((lesson) => (
+                          <button
+                            key={lesson.id}
+                            onClick={() => setActiveLesson(lesson)}
+                            className={`w-full text-left px-2 py-1 rounded text-xs transition-colors ${
+                              activeLesson?.id === lesson.id
+                                ? 'bg-purple-100 text-purple-700'
+                                : 'hover:bg-gray-100'
+                            }`}
+                            disabled={lesson.locked}
+                          >
+                            <div className="flex items-center space-x-2">
+                              {lesson.completed ? (
+                                <CheckCircle className="w-3 h-3 text-green-600" />
+                              ) : lesson.locked ? (
+                                <Lock className="w-3 h-3 text-gray-400" />
+                              ) : (
+                                <Play className="w-3 h-3 text-gray-400" />
+                              )}
+                              <span className={lesson.locked ? 'text-gray-400' : ''}>
+                                {lesson.title}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Área principal de vídeo */}
+            <div className="lg:col-span-3">
+              {activeLesson ? (
+                <>
+                  <div className="aspect-video bg-black rounded-lg mb-6 shadow-xl">
+                    {videoId ? (
+                      <iframe
+                        className="w-full h-full rounded-lg"
+                        src={`https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`}
+                        title="YouTube video player"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-white">
+                        <p>Vídeo não disponível</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white rounded-lg shadow-sm p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-2xl font-bold" style={customization.getHeadingStyle()}>
+                        {activeLesson.title}
+                      </h2>
+                      {activeLesson && !activeLesson.completed && !activeLesson.locked && (
+                        <button
+                          onClick={handleCompleteLesson}
+                          disabled={isCompleting}
+                          className={`px-4 py-2 text-white font-semibold text-sm flex items-center space-x-2 disabled:opacity-50 ${customization.getButtonClassName()}`}
+                          style={{
+                            backgroundColor: course?.customization?.colors?.button || course?.customization?.colors?.primary || '#10B981',
+                            color: course?.customization?.colors?.buttonText || '#FFFFFF',
+                          }}
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                          <span>{isCompleting ? 'Marcando...' : 'Marcar como concluída'}</span>
+                        </button>
+                      )}
+                    </div>
+                    <p className="text-gray-700 leading-relaxed" style={customization.getTextStyle()}>
+                      {activeLesson.title} - Assista a aula completa acima.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                  <p className="text-gray-600" style={customization.getTextStyle()}>
+                    Selecione uma aula para começar
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Layout padrão (com sidebar e player tradicional)
   return (
-    <div className="h-screen w-screen bg-gray-100 flex">
+    <div 
+      className="h-screen w-screen flex"
+      style={{
+        ...customization.getBackgroundStyle(),
+        backgroundColor: course?.customization?.background?.type !== 'image' && course?.customization?.background?.type !== 'gradient'
+          ? (course?.customization?.colors?.background || '#F3F4F6')
+          : undefined,
+      }}
+    >
       <AnimatePresence>
         {isSidebarOpen && (
           <motion.div
@@ -222,7 +417,11 @@ const CourseLearningPage: React.FC = () => {
             <button
               onClick={handleCompleteLesson}
               disabled={isCompleting}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 flex items-center space-x-2 disabled:opacity-50"
+              className={`px-4 py-2 text-white font-semibold text-sm flex items-center space-x-2 disabled:opacity-50 ${customization.getButtonClassName()}`}
+              style={{
+                backgroundColor: course?.customization?.colors?.button || course?.customization?.colors?.primary || '#10B981',
+                color: course?.customization?.colors?.buttonText || '#FFFFFF',
+              }}
             >
               <CheckCircle className="w-4 h-4" />
               <span>{isCompleting ? 'Marcando...' : 'Marcar como concluída'}</span>
