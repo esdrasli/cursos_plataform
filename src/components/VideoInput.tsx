@@ -1,13 +1,22 @@
 import React, { useState, useRef } from 'react';
 import { Upload, Link as LinkIcon, X, FileVideo, HardDrive } from 'lucide-react';
+import { uploadAPI, getApiBaseUrl } from '../services/api';
 
 interface VideoInputProps {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
+  courseId?: string;
+  lessonNumber?: number;
 }
 
-const VideoInput: React.FC<VideoInputProps> = ({ value, onChange, placeholder = 'URL do vídeo, Google Drive ou faça upload' }) => {
+const VideoInput: React.FC<VideoInputProps> = ({ 
+  value, 
+  onChange, 
+  placeholder = 'URL do vídeo, Google Drive ou faça upload',
+  courseId,
+  lessonNumber
+}) => {
   const [inputMode, setInputMode] = useState<'url' | 'drive' | 'upload'>('url');
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -29,33 +38,57 @@ const VideoInput: React.FC<VideoInputProps> = ({ value, onChange, placeholder = 
     setUploading(true);
     
     try {
-      // Criar FormData para enviar o arquivo
-      const formData = new FormData();
-      formData.append('video', file);
+      // Log para debug
+      console.log('🎥 VideoInput - Tentando fazer upload:', {
+        courseId,
+        courseIdType: typeof courseId,
+        lessonNumber,
+        lessonNumberType: typeof lessonNumber,
+        hasCourseId: !!courseId,
+        courseIdLength: courseId ? courseId.length : 0
+      });
       
-      // TODO: Substituir por endpoint real de upload
-      // Por enquanto, vamos criar uma URL temporária para preview
-      const videoUrl = URL.createObjectURL(file);
+      // Se courseId e lessonNumber estão disponíveis, fazer upload para o storage
+      // Validar que courseId não é vazio e lessonNumber é um número válido
+      const isValidCourseId = courseId && typeof courseId === 'string' && courseId.trim() !== '';
+      const isValidLessonNumber = lessonNumber !== undefined && typeof lessonNumber === 'number' && lessonNumber > 0;
       
-      // Em produção, você faria:
-      // const response = await fetch('/api/upload/video', {
-      //   method: 'POST',
-      //   body: formData
-      // });
-      // const data = await response.json();
-      // onChange(data.videoUrl);
+      console.log('🎥 VideoInput - Validação:', {
+        isValidCourseId,
+        isValidLessonNumber,
+        courseIdValue: courseId,
+        lessonNumberValue: lessonNumber
+      });
       
-      // Por enquanto, usar URL temporária (será perdida ao recarregar)
-      // Em produção, o backend deve retornar uma URL permanente
-      onChange(videoUrl);
-      
-      // Simular delay de upload
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (isValidCourseId && isValidLessonNumber) {
+        console.log('🎥 VideoInput - Fazendo upload com:', { courseId, lessonNumber });
+        const response = await uploadAPI.uploadVideo(file, courseId, lessonNumber);
+        
+        if (response.success && response.url) {
+          // Construir URL completa
+          let fullUrl = response.url;
+          
+          // Se a URL não começa com http, construir URL completa
+          if (!fullUrl.startsWith('http')) {
+            const baseUrl = getApiBaseUrl();
+            fullUrl = `${baseUrl}${fullUrl.startsWith('/') ? '' : '/'}${fullUrl}`;
+          }
+          
+          onChange(fullUrl);
+        } else {
+          throw new Error('Resposta inválida do servidor');
+        }
+      } else {
+        // Se não há courseId/lessonNumber válidos, mostrar erro
+        setUploading(false);
+        alert('⚠️ Para fazer upload de vídeo, você precisa salvar o curso primeiro. Por favor, salve o curso e tente novamente, ou use uma URL de vídeo (YouTube, Vimeo, Google Drive).');
+        return;
+      }
       
       setUploading(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao fazer upload:', error);
-      alert('Erro ao fazer upload do vídeo. Tente novamente ou use uma URL de vídeo.');
+      alert(error.response?.data?.message || 'Erro ao fazer upload do vídeo. Tente novamente ou use uma URL de vídeo.');
       setUploading(false);
     }
   };
@@ -338,17 +371,30 @@ const VideoInput: React.FC<VideoInputProps> = ({ value, onChange, placeholder = 
 
       {/* Upload de arquivo */}
       {isUpload && (
-        <div
-          onDragEnter={handleDrag}
-          onDragLeave={handleDrag}
-          onDragOver={handleDrag}
-          onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 ${
-            dragActive
-              ? 'border-primary-500 bg-primary-50 scale-[1.02] shadow-lg'
-              : 'border-gray-300 hover:border-primary-400 hover:bg-gray-50'
-          } ${uploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'}`}
-        >
+        <div className="space-y-3">
+          {/* Aviso se o curso não foi salvo */}
+          {(!courseId || (typeof courseId === 'string' && courseId.trim() === '') || lessonNumber === undefined || lessonNumber <= 0) && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800 font-medium mb-1">
+                ⚠️ Curso não salvo
+              </p>
+              <p className="text-xs text-yellow-700">
+                Para fazer upload de vídeo, você precisa salvar o curso primeiro. Após salvar, você poderá fazer upload de vídeos ou usar uma URL de vídeo (YouTube, Vimeo, Google Drive).
+              </p>
+            </div>
+          )}
+          
+          <div
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+            className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-200 ${
+              dragActive
+                ? 'border-primary-500 bg-primary-50 scale-[1.02] shadow-lg'
+                : 'border-gray-300 hover:border-primary-400 hover:bg-gray-50'
+            } ${uploading ? 'opacity-50 pointer-events-none' : 'cursor-pointer'} ${(!courseId || (typeof courseId === 'string' && courseId.trim() === '') || lessonNumber === undefined || lessonNumber <= 0) ? 'opacity-60' : ''}`}
+          >
           <input
             ref={fileInputRef}
             type="file"
@@ -405,6 +451,7 @@ const VideoInput: React.FC<VideoInputProps> = ({ value, onChange, placeholder = 
               )}
             </>
           )}
+          </div>
         </div>
       )}
     </div>

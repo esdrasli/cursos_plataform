@@ -46,6 +46,7 @@ services:
       - ./backend/tsconfig.json:/app/tsconfig.json
       - ./backend/.env:/app/.env
       - ./backend/uploads:/app/uploads
+      - ./storage:/home/ndx.sisaatech.com/storage
       - /app/node_modules
     command: npm run dev
     networks:

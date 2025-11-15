@@ -42,9 +42,18 @@ const CreatorCourseEditor: React.FC = () => {
       setIsLoading(true);
       const course = await coursesAPI.getById(courseId!);
       
+      console.log('📚 CreatorCourseEditor - Curso carregado:', {
+        courseIdFromParams: courseId,
+        courseIdFromResponse: course.id || course._id,
+        courseObject: course
+      });
+      
       // Adaptar dados do backend para o formato esperado
+      // Garantir que sempre temos um ID válido (usar courseId do useParams como fallback)
+      const courseIdValue = course.id || course._id || courseId;
+      
       setCourseData({
-        id: course.id || course._id,
+        id: courseIdValue,
         title: course.title || '',
         description: course.description || '',
         thumbnail: course.thumbnail || '',
@@ -57,6 +66,11 @@ const CreatorCourseEditor: React.FC = () => {
         modules: course.modules || [],
         status: course.status || 'draft',
         customization: course.customization || undefined
+      });
+      
+      console.log('📚 CreatorCourseEditor - courseData atualizado:', {
+        courseDataId: courseIdValue,
+        courseIdType: typeof courseIdValue
       });
     } catch (error: any) {
       console.error('Erro ao carregar curso:', error);
@@ -507,6 +521,26 @@ const CreatorCourseEditor: React.FC = () => {
                               value={lesson.videoUrl || ''}
                               onChange={(url) => updateLesson(moduleIndex, lessonIndex, 'videoUrl', url)}
                               placeholder="URL do vídeo ou faça upload"
+                              courseId={(() => {
+                                // Priorizar courseData.id, depois courseId do useParams
+                                const finalCourseId = courseData.id || courseId;
+                                console.log('📚 CreatorCourseEditor - courseId para VideoInput:', {
+                                  courseDataId: courseData.id,
+                                  courseIdFromParams: courseId,
+                                  finalCourseId,
+                                  finalCourseIdType: typeof finalCourseId
+                                });
+                                return finalCourseId || undefined;
+                              })()}
+                              lessonNumber={(() => {
+                                // Calcular número sequencial da aula somando aulas de módulos anteriores
+                                let lessonNumber = 1;
+                                for (let i = 0; i < moduleIndex; i++) {
+                                  lessonNumber += (courseData.modules?.[i]?.lessons?.length || 0);
+                                }
+                                lessonNumber += lessonIndex;
+                                return lessonNumber;
+                              })()}
                             />
                           </div>
                         )}

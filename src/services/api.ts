@@ -320,6 +320,58 @@ export const creatorAPI = {
   },
 };
 
+// Upload API
+export const uploadAPI = {
+  uploadImage: async (file: File) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    const response = await api.post('/upload/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+  uploadVideo: async (file: File, courseId: string, lessonNumber: number) => {
+    // Garantir que courseId é uma string válida
+    const courseIdStr = String(courseId || '').trim();
+    const lessonNumberStr = String(lessonNumber || '').trim();
+    
+    console.log('📤 API - Preparando upload de vídeo:', {
+      courseId: courseIdStr,
+      lessonNumber: lessonNumberStr,
+      courseIdLength: courseIdStr.length,
+      lessonNumberLength: lessonNumberStr.length
+    });
+    
+    if (!courseIdStr || courseIdStr === '') {
+      throw new Error('courseId é obrigatório e não pode estar vazio');
+    }
+    
+    if (!lessonNumberStr || lessonNumberStr === '') {
+      throw new Error('lessonNumber é obrigatório e não pode estar vazio');
+    }
+    
+    const formData = new FormData();
+    formData.append('video', file);
+    formData.append('courseId', courseIdStr);
+    formData.append('lessonNumber', lessonNumberStr);
+    
+    console.log('📤 API - FormData criado:', {
+      hasVideo: formData.has('video'),
+      hasCourseId: formData.has('courseId'),
+      hasLessonNumber: formData.has('lessonNumber')
+    });
+    
+    const response = await api.post('/upload/video', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+};
+
 // Config API
 export const configAPI = {
   getAll: async () => {

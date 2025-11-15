@@ -32,11 +32,26 @@ app.use(cors({
 // Webhook do Stripe precisa de raw body (antes do express.json())
 app.use('/api/checkout/webhook', express.raw({ type: 'application/json' }));
 
+// IMPORTANTE: express.json() e express.urlencoded() devem vir ANTES das rotas de upload
+// mas o multer processa multipart/form-data automaticamente, então não há conflito
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Servir arquivos estáticos (uploads)
 app.use('/uploads', express.static('uploads'));
+
+// Servir vídeos do storage de cursos
+// Estrutura: /storage/cursos/{userId}/{courseId}/aulas/aula_{lessonNumber}.mp4
+const videoStoragePath = process.env.VIDEO_STORAGE_PATH || '/home/ndx.sisaatech.com/storage/cursos';
+app.use('/storage/cursos', express.static(videoStoragePath, {
+  // Configurações para streaming de vídeo
+  setHeaders: (res, filePath) => {
+    // Permitir range requests para streaming
+    res.setHeader('Accept-Ranges', 'bytes');
+    // Cache control para vídeos
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+  }
+}));
 
 // Conectar ao PostgreSQL
 let retryCount = 0;
@@ -94,6 +109,10 @@ app.use('/api/affiliate', affiliateRoutes);
 app.use('/api/config', configRoutes);
 app.use('/api/branding', brandingRoutes);
 app.use('/api/upload', uploadRoutes);
+
+// Log para debug - verificar se rotas estão registradas
+console.log('✅ Rotas registradas:');
+console.log('   - /api/upload/video (POST)');
 
 // Rota de health check
 app.get('/api/health', (_req: Request, res: Response) => {

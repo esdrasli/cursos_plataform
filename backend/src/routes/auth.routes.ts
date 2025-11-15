@@ -83,6 +83,13 @@ router.post('/login', async (req: Request<{}, {}, LoginBody>, res: Response) => 
       return;
     }
 
+    // Verificar se a conexão com o banco está ativa
+    if (!AppDataSource.isInitialized) {
+      console.error('❌ Banco de dados não inicializado');
+      res.status(503).json({ message: 'Serviço temporariamente indisponível. Tente novamente em alguns instantes.' });
+      return;
+    }
+
     const userRepository = AppDataSource.getRepository(User);
 
     // Buscar usuário
@@ -93,6 +100,12 @@ router.post('/login', async (req: Request<{}, {}, LoginBody>, res: Response) => 
     }
 
     // Verificar senha
+    if (!user.password) {
+      console.error('❌ Usuário sem senha hash:', user.id);
+      res.status(500).json({ message: 'Erro interno. Contate o suporte.' });
+      return;
+    }
+
     const isPasswordValid = await user.comparePassword(password);
     if (!isPasswordValid) {
       res.status(401).json({ message: 'Email ou senha incorretos' });
@@ -118,8 +131,15 @@ router.post('/login', async (req: Request<{}, {}, LoginBody>, res: Response) => 
       }
     });
   } catch (error: any) {
-    console.error('Erro ao fazer login:', error);
-    res.status(500).json({ message: 'Erro ao fazer login', error: error.message });
+    console.error('❌ Erro ao fazer login:', {
+      error: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+    res.status(500).json({ 
+      message: 'Erro ao fazer login', 
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Erro interno do servidor'
+    });
   }
 });
 
