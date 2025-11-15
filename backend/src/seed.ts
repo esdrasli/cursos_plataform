@@ -13,7 +13,7 @@ dotenv.config();
 async function seed(): Promise<void> {
   try {
     console.log('🌱 Conectando ao PostgreSQL...');
-    
+    //teste'git
     // Aguardar conexão com retry
     let retries = 0;
     const maxRetries = 10;
