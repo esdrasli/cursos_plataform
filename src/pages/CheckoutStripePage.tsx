@@ -12,13 +12,17 @@ import { useAuth } from '../contexts/AuthContext';
 
 // Make sure to call `loadStripe` outside of a component's render to avoid
 // recreating the `Stripe` object on every render.
-// IMPORTANTE: Use VITE_STRIPE_PUBLIC_KEY do .env para produção
+// IMPORTANTE: Configure VITE_STRIPE_PUBLIC_KEY no arquivo .env
 // Chave de produção deve começar com pk_live_
 // Chave de teste deve começar com pk_test_
-const stripePromise = loadStripe(
-  import.meta.env.VITE_STRIPE_PUBLIC_KEY || 
-  'pk_live_51SSr1n1nsIDPAgl6NvMahjTIyMPlF6geQTZm0xPnrohxn1NLaQSRaRnW4FtnmW7CzWYlTHLKSYQBd64ywzEE5F3Z00iqvBnUcj'
-);
+// NUNCA commite chaves secretas no código!
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+
+if (!stripePublicKey) {
+  console.error('⚠️ VITE_STRIPE_PUBLIC_KEY não configurada! Configure no arquivo .env');
+}
+
+const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
 const CheckoutStripePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -134,14 +138,24 @@ const CheckoutStripePage: React.FC = () => {
             </div>
           )}
 
-          <div id="checkout" className="bg-white rounded-xl shadow-sm p-6">
-            <EmbeddedCheckoutProvider
-              stripe={stripePromise}
-              options={options}
-            >
-              <EmbeddedCheckout />
-            </EmbeddedCheckoutProvider>
-          </div>
+          {!stripePublicKey && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <p className="text-yellow-800">
+                ⚠️ Chave pública do Stripe não configurada. Configure <code>VITE_STRIPE_PUBLIC_KEY</code> no arquivo <code>.env</code>
+              </p>
+            </div>
+          )}
+
+          {stripePromise && (
+            <div id="checkout" className="bg-white rounded-xl shadow-sm p-6">
+              <EmbeddedCheckoutProvider
+                stripe={stripePromise}
+                options={options}
+              >
+                <EmbeddedCheckout />
+              </EmbeddedCheckoutProvider>
+            </div>
+          )}
         </div>
       </main>
       <Footer />

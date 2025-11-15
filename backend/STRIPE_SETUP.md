@@ -6,15 +6,17 @@ A integração com Stripe foi configurada com sucesso!
 
 ### Variáveis de Ambiente Configuradas
 
-O arquivo `.env` do backend foi atualizado com:
+Configure o arquivo `.env` do backend (copie de `.env.example`):
 
 ```env
 PAYMENT_GATEWAY=stripe
-PAYMENT_API_KEY=sk_live_SUA_CHAVE_SECRETA_AQUI
 STRIPE_SECRET_KEY=sk_live_SUA_CHAVE_SECRETA_AQUI
+PAYMENT_API_KEY=sk_live_SUA_CHAVE_SECRETA_AQUI
 PAYMENT_WEBHOOK_URL=http://localhost:3001/api/checkout/webhook
-STRIPE_WEBHOOK_SECRET=
+STRIPE_WEBHOOK_SECRET=whsec_SEU_WEBHOOK_SECRET_AQUI
 ```
+
+⚠️ **IMPORTANTE**: Nunca commite o arquivo `.env` com chaves reais no repositório!
 
 ## 🔧 Configurar Webhook do Stripe
 
@@ -105,8 +107,10 @@ Data: qualquer data futura
 
 ## ⚠️ Importante
 
-- A secret key fornecida é de **PRODUÇÃO** (sk_live_...)
-- Em desenvolvimento, considere usar chaves de teste (sk_test_...)
-- Nunca exponha a secret key no frontend
+- Use chaves de **TESTE** (sk_test_...) em desenvolvimento
+- Use chaves de **PRODUÇÃO** (sk_live_...) apenas em produção
+- **NUNCA** commite chaves secretas no repositório
+- **NUNCA** exponha a secret key no frontend
 - Use sempre HTTPS em produção para webhooks
+- Mantenha o arquivo `.env` no `.gitignore`
 

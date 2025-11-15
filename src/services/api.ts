@@ -3,9 +3,10 @@ import axios from 'axios';
 // Configuração da URL da API
 // IMPORTANTE: 
 // - Em desenvolvimento: usa o proxy do Vite (/api) que redireciona para backend:3001
-// - Em produção: usa VITE_API_URL do .env.production
+// - Em produção com Docker/nginx: usa /api (nginx faz proxy para backend:3001)
+// - Em produção sem nginx (ex: Hostinger): usa VITE_API_URL do .env.production
 const getApiUrl = () => {
-  // 1. Se houver VITE_API_URL definida (produção), usar ela
+  // 1. Se houver VITE_API_URL definida (produção sem nginx), usar ela
   const envUrl = import.meta.env.VITE_API_URL;
   
   if (envUrl) {
@@ -14,20 +15,49 @@ const getApiUrl = () => {
       console.warn('⚠️ VITE_API_URL contém nome de serviço Docker, usando proxy');
       return '/api';
     }
-    // URL válida para produção
+    // URL válida para produção (ex: https://api.exemplo.com/api)
     return envUrl;
   }
   
-  // 2. Em desenvolvimento (sem VITE_API_URL), usar o proxy do Vite
-  // O proxy redireciona /api para backend:3001 dentro do Docker
+  // 2. Em desenvolvimento ou produção com nginx: usar o proxy (/api)
+  // - Desenvolvimento: proxy do Vite redireciona /api para backend:3001
+  // - Produção com nginx: nginx redireciona /api para backend:3001
   // Isso funciona perfeitamente no navegador
   return '/api';
+};
+
+// Função utilitária para obter a URL base completa da API
+// Usada quando precisamos construir URLs completas (ex: para imagens)
+export const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  
+  // Se VITE_API_URL está definida e é uma URL válida, usar ela
+  if (envUrl && !envUrl.includes('backend:') && !envUrl.includes('backend/')) {
+    // Remover /api do final se existir, pois vamos adicionar depois
+    return envUrl.replace(/\/api\/?$/, '');
+  }
+  
+  // Em desenvolvimento, usar localhost:3001
+  if (import.meta.env.DEV) {
+    return 'http://localhost:3001';
+  }
+  
+  // Em produção com nginx ou sem nginx, usar o domínio atual
+  // O nginx faz proxy de /api para backend:3001, então URLs relativas funcionam
+  // Se precisar de URL absoluta, usar window.location.origin
+  if (typeof window !== 'undefined') {
+    return window.location.origin;
+  }
+  
+  // Fallback (SSR ou ambiente sem window)
+  return '';
 };
 
 const API_URL = getApiUrl();
 
 // Log para debug
 console.log('🔧 API URL configurada:', API_URL);
+console.log('🔧 API Base URL:', getApiBaseUrl());
 
 const api = axios.create({
   baseURL: API_URL,
@@ -250,6 +280,10 @@ export const brandingAPI = {
 export const creatorAPI = {
   getDashboardStats: async () => {
     const response = await api.get('/creator/dashboard/stats');
+    return response.data;
+  },
+  getCoursesStats: async () => {
+    const response = await api.get('/creator/courses/stats');
     return response.data;
   },
   getSales: async (params?: { search?: string; page?: number; limit?: number }) => {

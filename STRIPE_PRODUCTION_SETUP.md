@@ -12,6 +12,8 @@ STRIPE_SECRET_KEY=sk_live_SUA_CHAVE_SECRETA_AQUI
 PAYMENT_API_KEY=sk_live_SUA_CHAVE_SECRETA_AQUI
 ```
 
+⚠️ **NUNCA commite chaves secretas no repositório!**
+
 ### Frontend
 
 **IMPORTANTE**: Você precisa configurar a chave pública de produção no frontend.

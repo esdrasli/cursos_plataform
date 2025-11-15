@@ -69,14 +69,158 @@ router.get('/dashboard/stats', async (req: AuthRequest, res: Response) => {
     
     const newStudents = enrollmentsThisMonth.length;
     
+    // Receita total (todas as vendas)
+    const allSales = await saleRepository.find({
+      where: {
+        instructorId: req.user.id,
+        status: 'completed'
+      }
+    });
+    const totalRevenueAllTime = allSales.reduce((sum, sale) => sum + Number(sale.amount), 0);
+    const totalSalesAllTime = allSales.length;
+
+    // Total de alunos (todos os tempos)
+    const allEnrollments = await enrollmentRepository.find({
+      where: { courseId: In(courseIds) }
+    });
+    const totalStudents = new Set(allEnrollments.map(e => e.userId)).size;
+
+    // Receita por curso
+    const revenueByCourse = courses.map(course => {
+      const courseSales = allSales.filter(s => s.courseId === course.id);
+      const courseRevenue = courseSales.reduce((sum, sale) => sum + Number(sale.amount), 0);
+      const courseEnrollments = allEnrollments.filter(e => e.courseId === course.id);
+      return {
+        courseId: course.id,
+        courseTitle: course.title,
+        revenue: courseRevenue,
+        sales: courseSales.length,
+        students: courseEnrollments.length,
+        price: Number(course.price)
+      };
+    });
+
+    // Vendas dos últimos 7 dias
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const salesLast7Days = await saleRepository.find({
+      where: {
+        instructorId: req.user.id,
+        status: 'completed',
+        createdAt: MoreThanOrEqual(sevenDaysAgo)
+      }
+    });
+    const revenueLast7Days = salesLast7Days.reduce((sum, sale) => sum + Number(sale.amount), 0);
+
+    // Vendas dos últimos 30 dias
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const salesLast30Days = await saleRepository.find({
+      where: {
+        instructorId: req.user.id,
+        status: 'completed',
+        createdAt: MoreThanOrEqual(thirtyDaysAgo)
+      }
+    });
+    const revenueLast30Days = salesLast30Days.reduce((sum, sale) => sum + Number(sale.amount), 0);
+
     res.json({
+      // Estatísticas do mês atual
       totalRevenue,
       totalSales,
       newStudents,
-      totalCourses: courses.length
+      totalCourses: courses.length,
+      // Estatísticas gerais
+      totalRevenueAllTime,
+      totalSalesAllTime,
+      totalStudents,
+      // Estatísticas por período
+      revenueLast7Days,
+      salesLast7Days: salesLast7Days.length,
+      revenueLast30Days,
+      salesLast30Days: salesLast30Days.length,
+      // Receita por curso
+      revenueByCourse
     });
   } catch (error: any) {
     console.error('Erro ao buscar estatísticas do dashboard:', error);
+    res.status(500).json({ message: 'Erro ao buscar estatísticas', error: error.message });
+  }
+});
+
+// ========== ESTATÍSTICAS POR CURSO ==========
+router.get('/courses/stats', async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: 'Usuário não autenticado' });
+      return;
+    }
+
+    const courseRepository = AppDataSource.getRepository(Course);
+    const saleRepository = AppDataSource.getRepository(Sale);
+    const enrollmentRepository = AppDataSource.getRepository(Enrollment);
+
+    const courses = await courseRepository.find({
+      where: { instructorId: req.user.id },
+      order: { createdAt: 'DESC' }
+    });
+
+    const coursesWithStats = await Promise.all(
+      courses.map(async (course) => {
+        // Vendas do curso
+        const sales = await saleRepository.find({
+          where: {
+            courseId: course.id,
+            status: 'completed'
+          }
+        });
+        const revenue = sales.reduce((sum, sale) => sum + Number(sale.amount), 0);
+        
+        // Matrículas do curso
+        const enrollments = await enrollmentRepository.find({
+          where: { courseId: course.id }
+        });
+        
+        // Progresso médio dos alunos
+        const avgProgress = enrollments.length > 0
+          ? enrollments.reduce((sum, e) => sum + e.progress, 0) / enrollments.length
+          : 0;
+
+        // Vendas do mês atual
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const salesThisMonth = sales.filter(s => new Date(s.createdAt) >= startOfMonth);
+        const revenueThisMonth = salesThisMonth.reduce((sum, sale) => sum + Number(sale.amount), 0);
+
+        // Última venda
+        const lastSale = sales.length > 0 
+          ? sales.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+          : null;
+
+        return {
+          course: {
+            id: course.id,
+            title: course.title,
+            thumbnail: course.thumbnail,
+            price: Number(course.price),
+            status: course.status,
+            createdAt: course.createdAt,
+            updatedAt: course.updatedAt
+          },
+          stats: {
+            totalRevenue: revenue,
+            totalSales: sales.length,
+            totalStudents: enrollments.length,
+            avgProgress: Math.round(avgProgress),
+            revenueThisMonth,
+            salesThisMonth: salesThisMonth.length,
+            lastSaleDate: lastSale?.createdAt || null
+          }
+        };
+      })
+    );
+
+    res.json(coursesWithStats);
+  } catch (error: any) {
+    console.error('Erro ao buscar estatísticas por curso:', error);
     res.status(500).json({ message: 'Erro ao buscar estatísticas', error: error.message });
   }
 });

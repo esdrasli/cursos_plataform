@@ -22,6 +22,7 @@ import LandingPageViewPage from './pages/creator/LandingPageViewPage';
 import CreatorCourseEditor from './pages/creator/CreatorCourseEditor';
 import CourseVisualEditor from './pages/creator/CourseVisualEditor';
 import CoursePlatformEditor from './pages/creator/CoursePlatformEditor';
+import CreatorAdminPage from './pages/creator/CreatorAdminPage';
 import AffiliateDashboardPage from './pages/AffiliateDashboardPage';
 import AffiliateRegisterPage from './pages/AffiliateRegisterPage';
 import CartPage from './pages/CartPage';
@@ -49,10 +50,11 @@ function App() {
         <Route path="/affiliate" element={<ProtectedRoute><AffiliateDashboardPage /></ProtectedRoute>} />
         <Route path="/affiliate/register" element={<ProtectedRoute><AffiliateRegisterPage /></ProtectedRoute>} />
 
-        {/* Rotas da Área do Criador - Acessível para todos os usuários autenticados */}
-        <Route path="/creator" element={<ProtectedRoute><CreatorLayout /></ProtectedRoute>}>
-          <Route index element={<CreatorDashboardPage />} />
-          <Route path="courses" element={<CreatorCoursesPage />} />
+              {/* Rotas da Área do Criador - Acessível para todos os usuários autenticados */}
+              <Route path="/creator" element={<ProtectedRoute><CreatorLayout /></ProtectedRoute>}>
+                <Route index element={<CreatorDashboardPage />} />
+                <Route path="admin" element={<CreatorAdminPage />} />
+                <Route path="courses" element={<CreatorCoursesPage />} />
           <Route path="courses/new" element={<CreatorCourseEditor />} />
           <Route path="courses/edit/:courseId" element={<CreatorCourseEditor />} />
           <Route path="courses/visual/:courseId" element={<CourseVisualEditor />} />

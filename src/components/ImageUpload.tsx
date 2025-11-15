@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, Loader } from 'lucide-react';
-import { api } from '../services/api';
+import { api, getApiBaseUrl } from '../services/api';
 
 interface ImageUploadProps {
   value?: string;
@@ -60,9 +60,8 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
         let fullUrl = response.data.url;
         
         if (!fullUrl.startsWith('http')) {
-          // Em desenvolvimento, usar localhost:3001 diretamente
-          // Em produção, usar VITE_API_URL
-          const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+          // Usar a função utilitária para obter a URL base correta
+          const baseUrl = getApiBaseUrl();
           fullUrl = `${baseUrl}${fullUrl.startsWith('/') ? '' : '/'}${fullUrl}`;
         }
         
