@@ -423,8 +423,8 @@ export class PaymentService {
       'approved': 'approved',
       'rejected': 'rejected',
       'refunded': 'refunded',
+      'partially_refunded': 'refunded',
       'cancelled': 'rejected',
-      'refunded': 'refunded',
     };
 
     return statusMap[status] || 'pending';

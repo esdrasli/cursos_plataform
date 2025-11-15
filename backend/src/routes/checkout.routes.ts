@@ -426,82 +426,86 @@ router.post('/webhook', async (req: Request, res: Response) => {
       where: { transactionId: webhookData.transactionId } 
     });
 
+    // Webhooks devem sempre retornar 200 para evitar retentativas
+    // Mesmo que a venda não seja encontrada, devemos confirmar o recebimento
     if (!sale) {
-      res.status(404).json({ message: 'Venda não encontrada' });
-      return;
-    }
+      // Log para debug quando venda não é encontrada
+      console.warn(`Webhook recebido para venda não encontrada: ${webhookData.transactionId}`);
+    } else {
+      // Processar atualização da venda apenas se encontrada
+      // Atualizar status da venda
+      const oldStatus = sale.status;
+      sale.status = webhookData.status === 'approved' ? 'completed' : 
+                    webhookData.status === 'rejected' ? 'failed' : 
+                    webhookData.status === 'refunded' ? 'refunded' : sale.status;
+      
+      await saleRepository.save(sale);
 
-    // Atualizar status da venda
-    const oldStatus = sale.status;
-    sale.status = webhookData.status === 'approved' ? 'completed' : 
-                  webhookData.status === 'rejected' ? 'failed' : 
-                  webhookData.status === 'refunded' ? 'refunded' : sale.status;
-    
-    await saleRepository.save(sale);
-
-    // Se pagamento foi aprovado e ainda não há matrícula, criar
-    if (webhookData.status === 'approved' && oldStatus !== 'completed') {
-      const existingEnrollment = await enrollmentRepository.findOne({
-        where: {
-          userId: sale.studentId,
-          courseId: sale.courseId
-        }
-      });
-
-      if (!existingEnrollment) {
-        const enrollment = enrollmentRepository.create({
-          userId: sale.studentId,
-          courseId: sale.courseId
+      // Se pagamento foi aprovado e ainda não há matrícula, criar
+      if (webhookData.status === 'approved' && oldStatus !== 'completed') {
+        const existingEnrollment = await enrollmentRepository.findOne({
+          where: {
+            userId: sale.studentId,
+            courseId: sale.courseId
+          }
         });
-        
-        await enrollmentRepository.save(enrollment);
 
-        // Atualizar contador de alunos
-        const course = await courseRepository.findOne({ where: { id: sale.courseId } });
-        if (course) {
-          course.totalStudents += 1;
-          await courseRepository.save(course);
-        }
-
-        // Processar comissão do afiliado se houver
-        if (sale.affiliateCode) {
-          const affiliate = await affiliateRepository.findOne({
-            where: { affiliateCode: sale.affiliateCode, status: 'active' }
+        if (!existingEnrollment) {
+          const enrollment = enrollmentRepository.create({
+            userId: sale.studentId,
+            courseId: sale.courseId
           });
+          
+          await enrollmentRepository.save(enrollment);
 
-          if (affiliate) {
-            const commissionRate = parseFloat(affiliate.commissionRate.toString()) / 100;
-            const commissionAmount = Number(sale.amount) * commissionRate;
+          // Atualizar contador de alunos
+          const course = await courseRepository.findOne({ where: { id: sale.courseId } });
+          if (course) {
+            course.totalStudents += 1;
+            await courseRepository.save(course);
+          }
 
-            const existingAffiliateSale = await affiliateSaleRepository.findOne({
-              where: { saleId: sale.id }
+          // Processar comissão do afiliado se houver
+          if (sale.affiliateCode) {
+            const affiliate = await affiliateRepository.findOne({
+              where: { affiliateCode: sale.affiliateCode, status: 'active' }
             });
 
-            if (!existingAffiliateSale) {
-              const affiliateSale = affiliateSaleRepository.create({
-                affiliateId: affiliate.id,
-                saleId: sale.id,
-                courseId: sale.courseId,
-                studentId: sale.studentId,
-                saleAmount: Number(sale.amount),
-                commissionRate: affiliate.commissionRate,
-                commissionAmount,
-                status: 'approved',
+            if (affiliate) {
+              const commissionRate = parseFloat(affiliate.commissionRate.toString()) / 100;
+              const commissionAmount = Number(sale.amount) * commissionRate;
+
+              const existingAffiliateSale = await affiliateSaleRepository.findOne({
+                where: { saleId: sale.id }
               });
 
-              await affiliateSaleRepository.save(affiliateSale);
+              if (!existingAffiliateSale) {
+                const affiliateSale = affiliateSaleRepository.create({
+                  affiliateId: affiliate.id,
+                  saleId: sale.id,
+                  courseId: sale.courseId,
+                  studentId: sale.studentId,
+                  saleAmount: Number(sale.amount),
+                  commissionRate: affiliate.commissionRate,
+                  commissionAmount,
+                  status: 'approved',
+                });
 
-              // Atualizar estatísticas do afiliado
-              affiliate.totalSales += 1;
-              affiliate.totalEarnings = parseFloat(affiliate.totalEarnings.toString()) + commissionAmount;
-              affiliate.pendingEarnings = parseFloat(affiliate.pendingEarnings.toString()) + commissionAmount;
-              await affiliateRepository.save(affiliate);
+                await affiliateSaleRepository.save(affiliateSale);
+
+                // Atualizar estatísticas do afiliado
+                affiliate.totalSales += 1;
+                affiliate.totalEarnings = parseFloat(affiliate.totalEarnings.toString()) + commissionAmount;
+                affiliate.pendingEarnings = parseFloat(affiliate.pendingEarnings.toString()) + commissionAmount;
+                await affiliateRepository.save(affiliate);
+              }
             }
           }
         }
       }
     }
 
+    // Sempre retornar 200 para confirmar recebimento do webhook
     res.status(200).json({ message: 'Webhook processado com sucesso' });
   } catch (error: any) {
     console.error('Erro ao processar webhook:', error);
