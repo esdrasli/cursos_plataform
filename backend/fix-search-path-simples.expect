@@ -1,0 +1,83 @@
+#!/usr/bin/expect -f
+set timeout 60
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" { send "$password\r"; exp_continue }
+    "Password:" { send "$password\r"; exp_continue }
+    "# " { }
+}
+
+send "cd /opt/storylinker/cursos_plataform/backend\r"
+expect "# "
+
+# Tentar ler senha do postgres do arquivo .db_password
+send "cat /root/.db_password 2>/dev/null\r"
+expect {
+    -re "(.*)\r\n" {
+        set postgres_password $expect_out(1,string)
+        send_user "Senha do postgres encontrada\n"
+    }
+    "# " {
+        set postgres_password ""
+        send_user "Senha do postgres nao encontrada, tentando sem senha\n"
+    }
+}
+
+# Tentar executar o SQL
+send "psql -h localhost -p 5433 -U postgres -d ndx_sisaatech -c \"ALTER USER ndx_admin SET search_path TO cursos, public;\"\r"
+expect {
+    "Password:" {
+        if {$postgres_password != ""} {
+            send "$postgres_password\r"
+            expect "# "
+            send "echo 'Search path configurado!'\r"
+            expect "# "
+        } else {
+            send_user "\n⚠️  Precisa da senha do postgres.\n"
+            send_user "Execute manualmente:\n"
+            send_user "  ssh root@195.35.16.131\n"
+            send_user "  psql -h localhost -p 5433 -U postgres -d ndx_sisaatech\n"
+            send_user "  ALTER USER ndx_admin SET search_path TO cursos, public;\n"
+            send_user "  \\q\n"
+            send "exit\r"
+            expect eof
+            exit
+        }
+    }
+    "# " {
+        send "echo 'Search path configurado!'\r"
+        expect "# "
+    }
+    "ALTER ROLE" {
+        send_user "✅ Search path configurado com sucesso!\n"
+        expect "# "
+    }
+}
+
+# Verificar
+send "psql -h localhost -p 5433 -U postgres -d ndx_sisaatech -c \"SELECT usename, useconfig FROM pg_user WHERE usename = 'ndx_admin';\"\r"
+expect {
+    "Password:" {
+        if {$postgres_password != ""} {
+            send "$postgres_password\r"
+            expect "# "
+        } else {
+            send "exit\r"
+            expect eof
+            exit
+        }
+    }
+    "# " { }
+}
+
+send "echo 'Verificacao concluida!'\r"
+expect "# "
+
+send "exit\r"
+expect eof
+

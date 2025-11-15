@@ -357,12 +357,44 @@ CREATE TABLE IF NOT EXISTS public.app_configs (
 
 CREATE INDEX IF NOT EXISTS idx_app_configs_key ON public.app_configs(key);
 
+-- Tabela: brandings
+CREATE TABLE IF NOT EXISTS public.brandings (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    "creatorId" UUID NOT NULL UNIQUE,
+    logo VARCHAR(500),
+    "logoDark" VARCHAR(500),
+    "logoPosition" VARCHAR(100) DEFAULT 'left',
+    colors JSONB,
+    "fontFamily" VARCHAR(100),
+    "headingFont" VARCHAR(50),
+    "bodyFont" VARCHAR(50),
+    typography JSONB,
+    "coursesSection" JSONB,
+    styles JSONB,
+    favicon VARCHAR(500),
+    meta JSONB,
+    "createdAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_brandings_creatorId ON public.brandings("creatorId");
+
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'fk_brandings_creator'
+    ) THEN
+        ALTER TABLE public.brandings 
+        ADD CONSTRAINT fk_brandings_creator 
+        FOREIGN KEY ("creatorId") REFERENCES public.users(id);
+    END IF;
+END $$;
+
 -- Verificar tabelas criadas
 SELECT 
     '✅ Tabelas criadas:' as status,
     table_name
 FROM information_schema.tables 
 WHERE table_schema = 'public' 
-AND table_name IN ('users', 'courses', 'enrollments', 'sales', 'landing_pages', 'affiliates', 'affiliate_sales', 'app_configs', 'user_enrolled_courses')
+AND table_name IN ('users', 'courses', 'enrollments', 'sales', 'landing_pages', 'affiliates', 'affiliate_sales', 'app_configs', 'brandings', 'user_enrolled_courses')
 ORDER BY table_name;
 

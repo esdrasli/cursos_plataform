@@ -1,0 +1,93 @@
+#!/usr/bin/expect -f
+# Script para configurar servidor via SSH usando expect
+# Uso: ./configure-prod.expect
+
+set timeout 30
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" {
+        send "$password\r"
+        exp_continue
+    }
+    "Password:" {
+        send "$password\r"
+        exp_continue
+    }
+    "# " {
+        send "echo '✅ Conectado ao servidor'\r"
+    }
+    "$ " {
+        send "echo '✅ Conectado ao servidor'\r"
+    }
+    timeout {
+        puts "❌ Timeout ao conectar"
+        exit 1
+    }
+    "Permission denied" {
+        puts "❌ Acesso negado"
+        exit 1
+    }
+}
+
+expect {
+    "# " {
+        # Encontrar diretório do backend
+        send "echo '🔍 Procurando diretório do backend...'\r"
+        expect "# "
+        
+        send "BACKEND_DIR=\$(find /home -type d -name 'backend' 2>/dev/null | head -1); [ -z \"\$BACKEND_DIR\" ] && BACKEND_DIR=\$(find /var/www -type d -name 'backend' 2>/dev/null | head -1); [ -z \"\$BACKEND_DIR\" ] && BACKEND_DIR=\$(find /opt -type d -name 'backend' 2>/dev/null | head -1); echo \"BACKEND_DIR=\$BACKEND_DIR\"\r"
+        expect {
+            -re "BACKEND_DIR=(.*)\r\n" {
+                set backend_dir $expect_out(1,string)
+                if {$backend_dir == ""} {
+                    send "ls -la /home/ | head -10\r"
+                    expect "# "
+                    send "exit\r"
+                    exit 1
+                }
+                send "cd $backend_dir\r"
+                expect "# "
+                
+                # Verificar .env
+                send "if [ ! -f .env ]; then echo '❌ .env não encontrado'; ls -la | head -10; exit 1; fi\r"
+                expect "# "
+                
+                # Backup
+                send "cp .env .env.backup.$(date +%Y%m%d_%H%M%S)\r"
+                expect "# "
+                
+                # Adicionar DB_SCHEMA_PROD
+                send "if grep -q '^DB_SCHEMA_PROD=' .env; then sed -i 's/^DB_SCHEMA_PROD=.*/DB_SCHEMA_PROD=cursos/' .env && echo '✅ DB_SCHEMA_PROD atualizado'; else echo '' >> .env && echo 'DB_SCHEMA_PROD=cursos' >> .env && echo '✅ DB_SCHEMA_PROD adicionado'; fi\r"
+                expect "# "
+                
+                # Mostrar configuração
+                send "echo '📋 Configuração:' && grep '^DB_' .env | grep -v PASSWORD | head -10\r"
+                expect "# "
+                
+                # Reiniciar backend
+                send "echo '🔄 Reiniciando backend...'\r"
+                expect "# "
+                
+                send "if command -v pm2 > /dev/null 2>&1 && pm2 list | grep -q backend; then pm2 restart backend && echo '✅ Reiniciado via PM2'; elif command -v docker > /dev/null 2>&1 && docker ps | grep -q backend; then docker restart \$(docker ps --format '{{.Names}}' | grep backend | head -1) && echo '✅ Reiniciado via Docker'; elif systemctl list-units --type=service 2>/dev/null | grep -q backend; then systemctl restart backend && echo '✅ Reiniciado via systemd'; else echo '⚠️  Reinicie manualmente'; fi\r"
+                expect "# "
+                
+                send "echo '✅ Configuração concluída!'\r"
+                expect "# "
+                
+                send "exit\r"
+                expect eof
+            }
+        }
+    }
+    "$ " {
+        # Similar para shell normal
+        send "exit\r"
+        expect eof
+    }
+}
+

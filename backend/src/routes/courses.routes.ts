@@ -246,10 +246,26 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 // Obter cursos do usuário (todos os usuários autenticados)
 router.get('/creator/my-courses', authenticate, async (req: AuthRequest, res: Response) => {
   try {
+    // Verificar se o banco de dados está inicializado
+    if (!AppDataSource.isInitialized) {
+      console.error('❌ AppDataSource não está inicializado');
+      res.status(503).json({ message: 'Serviço temporariamente indisponível. Banco de dados não conectado.' });
+      return;
+    }
+
     if (!req.user) {
+      console.error('❌ Usuário não autenticado na requisição');
       res.status(401).json({ message: 'Usuário não autenticado' });
       return;
     }
+
+    if (!req.user.id) {
+      console.error('❌ ID do usuário não encontrado:', req.user);
+      res.status(401).json({ message: 'ID do usuário não encontrado' });
+      return;
+    }
+    
+    console.log(`📚 Buscando cursos do criador: ${req.user.id} (${req.user.email})`);
     
     const courseRepository = AppDataSource.getRepository(Course);
     const courses = await courseRepository.find({
@@ -257,10 +273,21 @@ router.get('/creator/my-courses', authenticate, async (req: AuthRequest, res: Re
       order: { createdAt: 'DESC' }
     });
     
+    console.log(`✅ Encontrados ${courses.length} cursos para o criador ${req.user.id}`);
     res.json(courses);
   } catch (error: any) {
-    console.error('Erro ao buscar cursos do criador:', error);
-    res.status(500).json({ message: 'Erro ao buscar cursos', error: error.message });
+    console.error('❌ Erro ao buscar cursos do criador:', error);
+    console.error('   Detalhes:', {
+      message: error.message,
+      stack: error.stack,
+      code: error.code,
+      name: error.name
+    });
+    res.status(500).json({ 
+      message: 'Erro ao buscar cursos', 
+      error: error.message,
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 });
 

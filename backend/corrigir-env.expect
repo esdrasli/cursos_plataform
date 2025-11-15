@@ -1,0 +1,48 @@
+#!/usr/bin/expect -f
+set timeout 30
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" { send "$password\r"; exp_continue }
+    "Password:" { send "$password\r"; exp_continue }
+    "# " { }
+}
+
+send "cd /opt/storylinker/cursos_plataform/backend\r"
+expect "# "
+
+# Adicionar DB_USER se não existir (usando DB_USERNAME como base)
+send "grep '^DB_USER=' .env || (DB_USERNAME_VAL=$(grep 'DB_USERNAME=' .env | cut -d= -f2); echo DB_USER=$DB_USERNAME_VAL >> .env)\r"
+expect "# "
+
+# Garantir que DB_SCHEMA_PROD está configurado
+send "grep -q '^DB_SCHEMA_PROD=' .env || echo 'DB_SCHEMA_PROD=cursos' >> .env\r"
+expect "# "
+
+send "echo 'Configuracao final:'\r"
+expect "# "
+
+send "grep '^DB_' .env | grep -v PASSWORD\r"
+expect "# "
+
+# Reiniciar PM2 com --update-env para recarregar variáveis
+send "pm2 restart all --update-env\r"
+expect {
+    -re ".*" { }
+    "# " { }
+}
+expect "# "
+
+send "pm2 status\r"
+expect "# "
+
+send "echo 'Configuracao concluida e backend reiniciado!'\r"
+expect "# "
+
+send "exit\r"
+expect eof
+

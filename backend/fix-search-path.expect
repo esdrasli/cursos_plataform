@@ -1,0 +1,33 @@
+#!/usr/bin/expect -f
+set timeout 30
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" { send "$password\r"; exp_continue }
+    "Password:" { send "$password\r"; exp_continue }
+    "# " { }
+}
+
+# Configurar search_path padrão para o usuário ndx_admin
+send "psql -h localhost -p 5433 -U postgres -d ndx_sisaatech -c \"ALTER USER ndx_admin SET search_path TO cursos, public;\"\r"
+expect {
+    "Password:" { 
+        send_user "Precisa da senha do postgres. Execute manualmente:\n"
+        send_user "psql -h localhost -p 5433 -U postgres -d ndx_sisaatech\n"
+        send_user "ALTER USER ndx_admin SET search_path TO cursos, public;\n"
+        send "exit\r"
+        expect eof
+        exit
+    }
+    "# " { }
+}
+
+send "echo 'Search path configurado!'\r"
+expect "# "
+
+send "exit\r"
+expect eof

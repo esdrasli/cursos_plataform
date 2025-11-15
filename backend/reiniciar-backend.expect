@@ -1,0 +1,36 @@
+#!/usr/bin/expect -f
+set timeout 30
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" { send "$password\r"; exp_continue }
+    "Password:" { send "$password\r"; exp_continue }
+    "# " { }
+}
+
+send "cd /opt/storylinker/cursos_plataform/backend\r"
+expect "# "
+
+send "pm2 restart all --update-env\r"
+expect {
+    -re ".*" { }
+    "# " { }
+}
+expect "# "
+
+send "pm2 status\r"
+expect "# "
+
+send "echo 'Backend reiniciado! Verifique os logs:'\r"
+expect "# "
+
+send "pm2 logs cursos-api --lines 20 --nostream\r"
+expect "# "
+
+send "exit\r"
+expect eof
+

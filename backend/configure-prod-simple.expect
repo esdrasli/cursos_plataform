@@ -1,0 +1,53 @@
+#!/usr/bin/expect -f
+set timeout 60
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" { send "$password\r"; exp_continue }
+    "Password:" { send "$password\r"; exp_continue }
+    "# " { }
+    "$ " { }
+    timeout { puts "Timeout"; exit 1 }
+}
+
+# Encontrar backend
+send "find /home /var/www /opt -type d -name 'backend' 2>/dev/null | head -1\r"
+expect {
+    -re "(/.*backend)" {
+        set backend_dir $expect_out(1,string)
+        send_user "Backend encontrado em: $backend_dir\n"
+        send "cd $backend_dir\r"
+        expect "# "
+        
+        # Backup e configurar
+        send "cp .env .env.backup.$(date +%Y%m%d_%H%M%S) 2>/dev/null; echo 'Backup criado'\r"
+        expect "# "
+        
+        send "grep -q '^DB_SCHEMA_PROD=' .env && sed -i 's/^DB_SCHEMA_PROD=.*/DB_SCHEMA_PROD=cursos/' .env || echo 'DB_SCHEMA_PROD=cursos' >> .env\r"
+        expect "# "
+        
+        send "echo 'Configuracao:' && grep '^DB_SCHEMA_PROD' .env\r"
+        expect "# "
+        
+        # Reiniciar
+        send "pm2 restart backend 2>/dev/null || docker restart $(docker ps --format '{{.Names}}' | grep backend | head -1) 2>/dev/null || systemctl restart backend 2>/dev/null || echo 'Reinicie manualmente'\r"
+        expect "# "
+        
+        send "echo 'Configuracao concluida!'\r"
+        expect "# "
+        send "exit\r"
+        expect eof
+    }
+    "# " {
+        send_user "Backend nao encontrado automaticamente\n"
+        send "ls -la /home/ | head -10\r"
+        expect "# "
+        send "exit\r"
+        expect eof
+    }
+}
+

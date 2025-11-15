@@ -1,0 +1,45 @@
+#!/usr/bin/expect -f
+set timeout 30
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" { send "$password\r"; exp_continue }
+    "Password:" { send "$password\r"; exp_continue }
+    "# " { }
+}
+
+# Conectar ao PostgreSQL e corrigir permissões
+send "psql -h localhost -p 5433 -U postgres -d ndx_sisaatech -c \"GRANT USAGE ON SCHEMA cursos TO ndx_admin;\"\r"
+expect {
+    "Password:" { send "postgres_password_here\r"; exp_continue }
+    "# " { }
+}
+
+send "psql -h localhost -p 5433 -U postgres -d ndx_sisaatech -c \"GRANT ALL PRIVILEGES ON SCHEMA cursos TO ndx_admin;\"\r"
+expect {
+    "Password:" { send "postgres_password_here\r"; exp_continue }
+    "# " { }
+}
+
+send "psql -h localhost -p 5433 -U postgres -d ndx_sisaatech -c \"GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA cursos TO ndx_admin;\"\r"
+expect {
+    "Password:" { send "postgres_password_here\r"; exp_continue }
+    "# " { }
+}
+
+send "psql -h localhost -p 5433 -U postgres -d ndx_sisaatech -c \"ALTER DEFAULT PRIVILEGES IN SCHEMA cursos GRANT ALL ON TABLES TO ndx_admin;\"\r"
+expect {
+    "Password:" { send "postgres_password_here\r"; exp_continue }
+    "# " { }
+}
+
+send "echo 'Permissoes corrigidas!'\r"
+expect "# "
+
+send "exit\r"
+expect eof
+

@@ -1,0 +1,35 @@
+#!/usr/bin/expect -f
+set timeout 30
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" { send "$password\r"; exp_continue }
+    "Password:" { send "$password\r"; exp_continue }
+    "# " { }
+}
+
+send "cd /opt/storylinker/cursos_plataform/backend\r"
+expect "# "
+
+send "echo 'Verificando .env:'\r"
+expect "# "
+
+send "grep '^DB_SCHEMA_PROD' .env\r"
+expect "# "
+
+send "echo ''\r"
+expect "# "
+
+send "echo 'Todas variaveis DB_:'\r"
+expect "# "
+
+send "grep '^DB_' .env | grep -v PASSWORD\r"
+expect "# "
+
+send "exit\r"
+expect eof
+

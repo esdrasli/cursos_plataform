@@ -64,23 +64,39 @@ async function connectDatabase() {
     console.log('✅ Conectado ao PostgreSQL');
     console.log(`📊 Banco de dados: ${AppDataSource.options.database}`);
     
+    // Configurar search_path após conexão (importante para produção com schema 'cursos')
+    if (process.env.DB_SCHEMA || (process.env.NODE_ENV === 'production' && process.env.DB_SCHEMA_PROD)) {
+      const schema = process.env.DB_SCHEMA || process.env.DB_SCHEMA_PROD || 'cursos';
+      try {
+        await AppDataSource.query(`SET search_path TO ${schema}, public;`);
+        console.log(`📂 Schema configurado: ${schema}`);
+      } catch (schemaError: any) {
+        console.error(`⚠️  Erro ao configurar schema: ${schemaError.message}`);
+      }
+    }
+    
     // Verificar se a tabela users existe, se não, tentar criar
     try {
-      const queryRunner = AppDataSource.createQueryRunner();
-      const result = await queryRunner.query(`
+      const schema = process.env.DB_SCHEMA || (process.env.NODE_ENV === 'production' && process.env.DB_SCHEMA_PROD) || 'public';
+      
+      // Usar query direta com schema explícito para evitar problemas de permissão
+      const result = await AppDataSource.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables 
-          WHERE table_schema = 'public' 
+          WHERE table_schema = $1
           AND table_name = 'users'
-        );
-      `);
+        ) as exists;
+      `, [schema]);
       
-      if (!result[0].exists) {
-        console.log('⚠️  Tabelas não encontradas. Execute: npm run init-db');
+      if (!result[0]?.exists) {
+        console.log(`⚠️  Tabela users não encontrada no schema '${schema}'. Execute: npm run init-db`);
         console.log('   Ou execute o script create_tables.sql no DBeaver');
+      } else {
+        console.log(`✅ Tabela users encontrada no schema '${schema}'`);
       }
-    } catch (checkError) {
-      // Ignorar erros de verificação
+    } catch (checkError: any) {
+      // Ignorar erros de verificação (pode ser problema de permissão)
+      console.log(`⚠️  Não foi possível verificar tabelas: ${checkError.message}`);
     }
   } catch (err: any) {
     retryCount++;

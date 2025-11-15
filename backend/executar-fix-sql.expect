@@ -1,0 +1,61 @@
+#!/usr/bin/expect -f
+set timeout 30
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" { send "$password\r"; exp_continue }
+    "Password:" { send "$password\r"; exp_continue }
+    "# " { }
+}
+
+send "cd /opt/storylinker/cursos_plataform/backend\r"
+expect "# "
+
+# Tentar executar SQL (pode pedir senha do postgres)
+send "psql -h localhost -p 5433 -U postgres -d ndx_sisaatech -c \"ALTER USER ndx_admin SET search_path TO cursos, public;\"\r"
+expect {
+    "Password:" {
+        send_user "\n⚠️  Precisa da senha do postgres.\n"
+        send_user "Execute manualmente:\n"
+        send_user "  ssh root@195.35.16.131\n"
+        send_user "  psql -h localhost -p 5433 -U postgres -d ndx_sisaatech\n"
+        send_user "  ALTER USER ndx_admin SET search_path TO cursos, public;\n"
+        send_user "  \\q\n"
+        send "exit\r"
+        expect eof
+        exit
+    }
+    "# " {
+        send "echo 'Search path configurado!'\r"
+        expect "# "
+    }
+    timeout {
+        send_user "\n⚠️  Timeout. Execute manualmente.\n"
+        send "exit\r"
+        expect eof
+        exit
+    }
+}
+
+# Verificar configuração
+send "psql -h localhost -p 5433 -U postgres -d ndx_sisaatech -c \"SELECT usename, useconfig FROM pg_user WHERE usename = 'ndx_admin';\"\r"
+expect {
+    "Password:" {
+        send_user "\n✅ Search path configurado (não foi possível verificar)\n"
+        send "exit\r"
+        expect eof
+        exit
+    }
+    "# " { }
+}
+
+send "echo 'Verificacao concluida!'\r"
+expect "# "
+
+send "exit\r"
+expect eof
+

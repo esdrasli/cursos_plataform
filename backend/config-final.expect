@@ -1,0 +1,56 @@
+#!/usr/bin/expect -f
+set timeout 60
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" { send "$password\r"; exp_continue }
+    "Password:" { send "$password\r"; exp_continue }
+    "# " { }
+    timeout { puts "Timeout"; exit 1 }
+}
+
+# Ir para o diretório correto
+send "cd /opt/storylinker/cursos_plataform/backend\r"
+expect "# "
+
+# Verificar se .env existe
+send "ls -la .env\r"
+expect "# "
+
+# Backup
+send "cp .env .env.backup\r"
+expect "# "
+
+# Adicionar ou atualizar DB_SCHEMA_PROD
+send "grep -q '^DB_SCHEMA_PROD=' .env && sed -i 's/^DB_SCHEMA_PROD=.*/DB_SCHEMA_PROD=cursos/' .env || echo 'DB_SCHEMA_PROD=cursos' >> .env\r"
+expect "# "
+
+# Verificar
+send "echo 'Configuracao:' && grep '^DB_SCHEMA_PROD' .env\r"
+expect "# "
+
+# Verificar como o backend está rodando
+send "pm2 list\r"
+expect "# "
+
+# Tentar reiniciar PM2 (qualquer processo que contenha backend ou api)
+send "pm2 restart all\r"
+expect {
+    -re ".*" { }
+    "# " { }
+}
+expect "# "
+
+send "pm2 status\r"
+expect "# "
+
+send "echo 'Configuracao concluida!'\r"
+expect "# "
+
+send "exit\r"
+expect eof
+

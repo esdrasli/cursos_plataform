@@ -1,0 +1,39 @@
+#!/usr/bin/expect -f
+set timeout 60
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" { send "$password\r"; exp_continue }
+    "Password:" { send "$password\r"; exp_continue }
+    "# " { }
+}
+
+send "cd /opt/storylinker/cursos_plataform/backend\r"
+expect "# "
+
+# Fazer pull das mudanças (se usar git) ou copiar arquivos
+send "echo 'Atualizando codigo...'\r"
+expect "# "
+
+# Recompilar
+send "npm run build\r"
+expect {
+    -re ".*" { }
+    "# " { }
+}
+expect "# "
+
+# Reiniciar PM2 com update-env
+send "pm2 restart all --update-env\r"
+expect "# "
+
+send "pm2 logs cursos-api --lines 20 --nostream\r"
+expect "# "
+
+send "exit\r"
+expect eof
+

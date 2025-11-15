@@ -1,0 +1,42 @@
+#!/usr/bin/expect -f
+set timeout 30
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" { send "$password\r"; exp_continue }
+    "Password:" { send "$password\r"; exp_continue }
+    "# " { }
+}
+
+send "cd /opt/storylinker/cursos_plataform/backend\r"
+expect "# "
+
+# Adicionar DB_USER
+send "echo DB_USER=ndx_admin >> .env\r"
+expect "# "
+
+# Garantir DB_SCHEMA_PROD
+send "echo DB_SCHEMA_PROD=cursos >> .env\r"
+expect "# "
+
+# Mostrar configuração
+send "echo '=== Configuracao ==='\r"
+expect "# "
+
+send "cat .env\r"
+expect "# "
+
+# Reiniciar PM2 com update-env
+send "pm2 restart all --update-env\r"
+expect "# "
+
+send "pm2 status\r"
+expect "# "
+
+send "exit\r"
+expect eof
+

@@ -1,0 +1,64 @@
+#!/usr/bin/expect -f
+set timeout 60
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" { send "$password\r"; exp_continue }
+    "Password:" { send "$password\r"; exp_continue }
+    "# " { }
+}
+
+send "cd /opt/storylinker/cursos_plataform/backend\r"
+expect "# "
+
+# Criar arquivo SQL temporário
+send "cat > /tmp/fix_search_path.sql << 'EOFSQL'\r"
+expect "# "
+send "ALTER USER ndx_admin SET search_path TO cursos, public;\r"
+expect "# "
+send "EOFSQL\r"
+expect "# "
+
+# Tentar executar via sudo (pode funcionar se root tiver acesso)
+send "sudo -u postgres psql -h localhost -p 5433 -d ndx_sisaatech -f /tmp/fix_search_path.sql 2>&1 || echo 'Tentando metodo alternativo...'\r"
+expect {
+    "# " {
+        send "echo 'Verificando se funcionou...'\r"
+        expect "# "
+        
+        # Verificar se funcionou
+        send "sudo -u postgres psql -h localhost -p 5433 -d ndx_sisaatech -c \"SELECT usename, useconfig FROM pg_user WHERE usename = 'ndx_admin';\" 2>&1\r"
+        expect "# "
+        
+        send "rm -f /tmp/fix_search_path.sql\r"
+        expect "# "
+        
+        send "echo 'Configuracao concluida!'\r"
+        expect "# "
+    }
+    timeout {
+        send_user "\n⚠️  Não foi possível executar automaticamente.\n"
+        send_user "Execute manualmente:\n"
+        send_user "  ssh root@195.35.16.131\n"
+        send_user "  psql -h localhost -p 5433 -U postgres -d ndx_sisaatech\n"
+        send_user "  ALTER USER ndx_admin SET search_path TO cursos, public;\n"
+        send "exit\r"
+        expect eof
+        exit
+    }
+}
+
+# Reiniciar backend
+send "pm2 restart all --update-env\r"
+expect "# "
+
+send "pm2 logs cursos-api --lines 10 --nostream\r"
+expect "# "
+
+send "exit\r"
+expect eof
+

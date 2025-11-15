@@ -1,0 +1,44 @@
+#!/usr/bin/expect -f
+set timeout 30
+set server "195.35.16.131"
+set user "root"
+set password "SisaaTTech1@"
+
+spawn ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null $user@$server
+
+expect {
+    "password:" { send "$password\r"; exp_continue }
+    "Password:" { send "$password\r"; exp_continue }
+    "# " { }
+}
+
+send "cd /opt/storylinker/cursos_plataform/backend\r"
+expect "# "
+
+# Adicionar DB_USER baseado em DB_USERNAME
+send "DB_USERNAME_VAL=$(grep DB_USERNAME .env | cut -d= -f2)\r"
+expect "# "
+
+send "echo DB_USER=$DB_USERNAME_VAL >> .env\r"
+expect "# "
+
+# Garantir DB_SCHEMA_PROD
+send "echo DB_SCHEMA_PROD=cursos >> .env\r"
+expect "# "
+
+send "echo 'Configuracao:'\r"
+expect "# "
+
+send "cat .env | grep DB_\r"
+expect "# "
+
+# Reiniciar com update-env
+send "pm2 restart all --update-env\r"
+expect "# "
+
+send "pm2 status\r"
+expect "# "
+
+send "exit\r"
+expect eof
+
