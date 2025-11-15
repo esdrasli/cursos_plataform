@@ -13,7 +13,7 @@ As chaves do Stripe foram commitadas no commit `fc29d80`. Você precisa:
 ### 1. Revogar Chaves no Stripe
 
 1. Acesse: https://dashboard.stripe.com/apikeys
-2. Revogue estas chaves:
+2. Revogue estas chaves (já revogadas):
    - Secret: `sk_live_***REVOGADA***`
    - Public: `pk_live_***REVOGADA***`
 3. Crie novas chaves
@@ -37,7 +37,7 @@ git push origin --force --all
 #### Opção B: Usar BFG Repo-Cleaner
 
 ```bash
-# Criar arquivo com chaves a remover
+# Criar arquivo com chaves a remover (já revogadas)
 echo 'sk_live_***REVOGADA***' > secrets.txt
 echo 'pk_live_***REVOGADA***' >> secrets.txt
 
