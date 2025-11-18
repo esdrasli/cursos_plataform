@@ -34,18 +34,18 @@ export default defineConfig({
     proxy: {
       '/api': {
         // No Docker, usar o nome do serviço. Localmente, usar localhost
-        target: process.env.VITE_API_TARGET || 'http://backend:3001',
+        target: process.env.VITE_API_TARGET || 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
         ws: true, // WebSocket support
-        configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, res) => {
+        configure: (proxy) => {
+          proxy.on('error', (err) => {
             console.log('proxy error', err);
           });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
             console.log('Sending Request to the Target:', req.method, req.url);
           });
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
+          proxy.on('proxyRes', (proxyRes, req) => {
             console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
           });
         },
