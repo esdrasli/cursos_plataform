@@ -1,3 +1,5 @@
+/* eslint-env node */
+/* global console */
 import express from 'express';
 import Enrollment from '../models/Enrollment.js';
 import Course from '../models/Course.js';

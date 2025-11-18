@@ -1,3 +1,5 @@
+/* eslint-env node */
+/* global process, console */
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
@@ -58,6 +60,13 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
+    console.log('🔐 Tentativa de login recebida:', {
+      origin: req.headers.origin,
+      method: req.method,
+      hasBody: !!req.body,
+      email: req.body?.email ? '***' : 'não fornecido'
+    });
+    
     const { email, password } = req.body;
 
     if (!email || !password) {

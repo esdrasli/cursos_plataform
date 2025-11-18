@@ -1,3 +1,5 @@
+/* eslint-env node */
+/* global process, console */
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -17,7 +19,38 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
-app.use(cors());
+// Configuração de CORS mais permissiva para aceitar requisições do frontend
+app.use(cors({
+  origin: function (origin, callback) {
+    // Permitir requisições sem origin (ex: Postman, mobile apps)
+    if (!origin) return callback(null, true);
+    
+    // Lista de origens permitidas
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://localhost:5174',
+      'https://ndx.sisaatech.com',
+      'http://ndx.sisaatech.com',
+      'https://api.ndx.sisaatech.com',
+      'http://api.ndx.sisaatech.com'
+    ];
+    
+    // Verificar se a origem está na lista ou se é do mesmo domínio
+    if (allowedOrigins.includes(origin) || origin.includes('ndx.sisaatech.com')) {
+      callback(null, true);
+    } else if (process.env.NODE_ENV === 'development') {
+      // Em desenvolvimento, permitir todas as origens
+      callback(null, true);
+    } else {
+      callback(new Error('Não permitido pelo CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range']
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -48,7 +81,20 @@ app.get('/api/health', (req, res) => {
 });
 
 // Middleware de erro
-app.use((err, req, res, next) => {
+app.use((err, req, res) => {
+  // Tratar erros de CORS especificamente
+  if (err.message && err.message.includes('CORS')) {
+    console.error('❌ Erro de CORS:', {
+      origin: req.headers.origin,
+      method: req.method,
+      url: req.url
+    });
+    return res.status(403).json({
+      message: 'Acesso negado por CORS',
+      origin: req.headers.origin
+    });
+  }
+  
   console.error('Erro:', err);
   res.status(err.status || 500).json({
     message: err.message || 'Erro interno do servidor',
