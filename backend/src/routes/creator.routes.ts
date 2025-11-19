@@ -228,7 +228,7 @@ router.get('/courses/stats', async (req: AuthRequest, res: Response) => {
 });
 
 // ========== VENDAS ==========
-router.get('/sales', async (req: AuthRequest<{}, {}, {}, CreatorQuery>, res: Response) => {
+router.get('/sales', async (req: AuthRequest<never, never, never, CreatorQuery>, res: Response) => {
   try {
     if (!req.user) {
       res.status(401).json({ message: 'Usuário não autenticado' });
@@ -302,7 +302,7 @@ router.get('/sales', async (req: AuthRequest<{}, {}, {}, CreatorQuery>, res: Res
 });
 
 // ========== ALUNOS ==========
-router.get('/students', async (req: AuthRequest<{}, {}, {}, CreatorQuery>, res: Response) => {
+router.get('/students', async (req: AuthRequest<never, never, never, CreatorQuery>, res: Response) => {
   try {
     if (!req.user) {
       res.status(401).json({ message: 'Usuário não autenticado' });
@@ -476,7 +476,7 @@ router.get('/landing-pages/:id', async (req: AuthRequest<{ id: string }>, res: R
   }
 });
 
-router.post('/landing-pages', async (req: AuthRequest<{}, {}, CreateLandingPageBody>, res: Response) => {
+router.post('/landing-pages', async (req: AuthRequest<never, never, CreateLandingPageBody>, res: Response) => {
   try {
     if (!req.user) {
       res.status(401).json({ message: 'Usuário não autenticado' });
@@ -588,7 +588,7 @@ interface GenerateAIContentBody {
   courseDescription?: string;
 }
 
-router.post('/ai/generate-content', async (req: AuthRequest<{}, {}, GenerateAIContentBody>, res: Response) => {
+router.post('/ai/generate-content', async (req: AuthRequest<never, never, GenerateAIContentBody>, res: Response) => {
   try {
     if (!req.user) {
       res.status(401).json({ message: 'Usuário não autenticado' });
