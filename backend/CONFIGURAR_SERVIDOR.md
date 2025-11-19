@@ -148,10 +148,52 @@ Procure por mensagens como:
 - "Schema: cursos"
 - Erros de conexão ou tabelas não encontradas
 
+## 💳 Configurar Stripe (Pagamentos)
+
+Se você receber o erro "Stripe não configurado", siga estes passos:
+
+### Opção 1: Script Automático
+
+```bash
+cd /opt/apps/cursos_plataform/backend
+./scripts/configurar-stripe.sh
+```
+
+O script irá solicitar:
+- Chave Secreta do Stripe (`sk_live_...`)
+- Webhook Secret (`whsec_...`)
+- URL do Webhook
+
+### Opção 2: Manual
+
+Edite o arquivo `.env` e adicione:
+
+```env
+PAYMENT_GATEWAY=stripe
+STRIPE_SECRET_KEY=sk_live_SUA_CHAVE_SECRETA_AQUI
+PAYMENT_API_KEY=sk_live_SUA_CHAVE_SECRETA_AQUI
+STRIPE_WEBHOOK_SECRET=whsec_SEU_WEBHOOK_SECRET_AQUI
+PAYMENT_WEBHOOK_URL=https://api.ndx.sisaatech.com/api/checkout/webhook
+```
+
+**Como obter as chaves:**
+1. Acesse: https://dashboard.stripe.com
+2. Vá em **Developers** → **API keys**
+3. Copie a **Secret key** (começa com `sk_live_...`)
+4. Para o webhook, vá em **Developers** → **Webhooks** e crie um endpoint
+
+Após configurar, reinicie o servidor:
+```bash
+pm2 restart cursos-api --update-env
+```
+
+📖 **Documentação completa**: Veja `CONFIGURAR_STRIPE_PRODUCAO.md`
+
 ## 📋 Checklist
 
 - [ ] Arquivo `.env` editado
 - [ ] Linha `DB_SCHEMA_PROD=cursos` adicionada
+- [ ] Stripe configurado (se necessário)
 - [ ] Backend reiniciado
 - [ ] Endpoint testado
 - [ ] Logs verificados (se necessário)
