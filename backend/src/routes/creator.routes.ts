@@ -853,7 +853,7 @@ async function generateSmartContent(
   }
 
   // Usar paleta de cores do banco ou padrão
-  const selectedPalette = colorPalettes[layoutConfig.colorScheme] || colorPalettes.primary;
+  const selectedPalette: Record<string, string> = { ...(colorPalettes[layoutConfig.colorScheme] || colorPalettes.primary) };
 
   return {
     hero: {
