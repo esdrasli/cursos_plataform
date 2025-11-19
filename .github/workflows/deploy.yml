@@ -15,18 +15,23 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Sync files to server
-        uses: appleboy/scp-action@master
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "backend/"
-          target: "/tmp/backend-deploy/"
-          strip_components: 1
-          command_timeout: 300s
-          script_after: "exit 0"  # Sempre suceder mesmo com erro do .bashrc
-          debug: false
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+      
+      - name: Sync files with rsync
+        run: |
+          rsync -avz --delete \
+            --exclude='node_modules' \
+            --exclude='dist' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='.git' \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=no" \
+            backend/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/tmp/backend-deploy/
       
       - name: Deploy to VPS
         uses: appleboy/ssh-action@master
@@ -34,11 +39,11 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          script_stop: false  # Não parar em caso de erro
+          script_stop: false
           script: |
-            # Ignorar erros do .bashrc e usar shell não-interativo
+            # Usar shell não-interativo para evitar erros do .bashrc
             export BASH_ENV=""
-            set +e  # Não parar em caso de erro
+            set +e
             
             echo "🚀 Iniciando deploy do backend..."
             
@@ -72,7 +77,6 @@ jobs:
               rsync -av --exclude='.env' --exclude='.env.*' --exclude='node_modules' --exclude='dist' --exclude='.git' /tmp/backend-deploy/ "$BACKEND_DIR/" || {
                 echo "⚠️  Rsync falhou, tentando cp..."
                 cp -r /tmp/backend-deploy/* "$BACKEND_DIR/" 2>/dev/null || true
-                cp -r /tmp/backend-deploy/.* "$BACKEND_DIR/" 2>/dev/null || true
               }
               
               # Limpar arquivos temporários
@@ -80,7 +84,7 @@ jobs:
               echo "✅ Arquivos sincronizados"
             else
               echo "❌ Diretório /tmp/backend-deploy não encontrado!"
-              echo "⚠️  O SCP pode ter falhado. Verificando se podemos continuar..."
+              echo "⚠️  O rsync pode ter falhado. Verificando se podemos continuar..."
               # Não falhar aqui, apenas avisar
             fi
             
