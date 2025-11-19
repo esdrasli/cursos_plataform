@@ -17,9 +17,98 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /opt/storylinker/cursos_plataform/backend
-            git pull origin main
-            npm install
-            npm run build
-            pm2 restart cursos-api
-            pm2 list
+            set -e  # Parar em caso de erro
+            
+            echo "🚀 Iniciando deploy do backend..."
+            
+            # Tentar encontrar o diretório do backend
+            BACKEND_DIR="/opt/apps/cursos_plataform/backend"
+            if [ ! -d "$BACKEND_DIR" ]; then
+              BACKEND_DIR="/opt/storylinker/cursos_plataform/backend"
+            fi
+            if [ ! -d "$BACKEND_DIR" ]; then
+              BACKEND_DIR=$(find /opt /home /var/www -type d -name "backend" 2>/dev/null | grep -i cursos | head -1)
+            fi
+            
+            if [ -z "$BACKEND_DIR" ] || [ ! -d "$BACKEND_DIR" ]; then
+              echo "❌ Diretório do backend não encontrado!"
+              exit 1
+            fi
+            
+            echo "✅ Diretório encontrado: $BACKEND_DIR"
+            cd "$BACKEND_DIR"
+            
+            # Verificar status do git antes do pull
+            echo "📋 Status do git antes do pull:"
+            git status --short || true
+            
+            # Fazer pull do código
+            echo "📥 Fazendo pull do repositório..."
+            git fetch origin main
+            git pull origin main || {
+              echo "⚠️  Git pull falhou, tentando reset hard..."
+              git reset --hard origin/main
+            }
+            
+            # Verificar se a rota está presente
+            echo "🔍 Verificando se a rota create-checkout-session existe..."
+            if grep -q "create-checkout-session" routes/checkout.routes.js 2>/dev/null; then
+              echo "✅ Rota encontrada em routes/checkout.routes.js"
+            elif grep -q "create-checkout-session" src/routes/checkout.routes.ts 2>/dev/null; then
+              echo "✅ Rota encontrada em src/routes/checkout.routes.ts"
+            else
+              echo "⚠️  Rota não encontrada nos arquivos!"
+            fi
+            
+            # Instalar dependências
+            echo "📦 Instalando dependências..."
+            npm install --production=false
+            
+            # Fazer build se usar TypeScript
+            if [ -f "tsconfig.json" ]; then
+              echo "🔨 Fazendo build TypeScript..."
+              npm run build
+              
+              # Verificar se a rota está no arquivo compilado
+              if [ -f "dist/routes/checkout.routes.js" ]; then
+                if grep -q "create-checkout-session" dist/routes/checkout.routes.js; then
+                  echo "✅ Rota encontrada no arquivo compilado"
+                else
+                  echo "⚠️  Rota não encontrada no arquivo compilado!"
+                fi
+              fi
+            fi
+            
+            # Encontrar o processo PM2
+            echo "📊 Verificando processos PM2..."
+            PM2_APP=$(pm2 list | grep -E "cursos-api|backend" | awk '{print $2}' | head -1)
+            
+            if [ -z "$PM2_APP" ]; then
+              echo "⚠️  Processo PM2 não encontrado. Listando todos os processos:"
+              pm2 list
+              echo "❌ Não foi possível reiniciar o PM2 automaticamente"
+              exit 1
+            fi
+            
+            echo "✅ Processo PM2 encontrado: $PM2_APP"
+            
+            # Mostrar qual arquivo está rodando
+            echo "📋 Informações do processo:"
+            pm2 show "$PM2_APP" | grep -E "script|exec_mode|status" || true
+            
+            # Reiniciar PM2
+            echo "🔄 Reiniciando PM2..."
+            pm2 restart "$PM2_APP" --update-env
+            
+            # Aguardar um pouco para o processo iniciar
+            sleep 3
+            
+            # Verificar status
+            echo "📊 Status do PM2:"
+            pm2 status
+            
+            # Mostrar últimas linhas do log
+            echo "📋 Últimas linhas do log:"
+            pm2 logs "$PM2_APP" --lines 10 --nostream || true
+            
+            echo "✅ Deploy concluído com sucesso!"
