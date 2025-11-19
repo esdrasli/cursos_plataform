@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, BookCopy, BarChart2, Users, Settings, GraduationCap, Menu, X, Bell, User, LayoutTemplate, Palette, BarChart3 } from 'lucide-react';
+import { LayoutDashboard, BookCopy, BarChart2, Users, Settings, GraduationCap, Menu, X, Bell, LayoutTemplate, Palette, BarChart3 } from 'lucide-react';
 
 const navItems = [
   { name: 'Dashboard', href: '/creator', icon: LayoutDashboard },
