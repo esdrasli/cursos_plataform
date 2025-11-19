@@ -1,6 +1,13 @@
 import axios from 'axios';
 import Stripe from 'stripe';
 
+export interface PaymentMetadata {
+  courseId?: string;
+  userId?: string;
+  affiliateCode?: string;
+  [key: string]: unknown;
+}
+
 export interface PaymentData {
   amount: number;
   description: string;
@@ -17,7 +24,7 @@ export interface PaymentData {
     email: string;
     document?: string;
   };
-  metadata?: Record<string, any>;
+  metadata?: PaymentMetadata;
 }
 
 export interface PaymentResult {
