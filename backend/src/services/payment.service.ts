@@ -50,7 +50,7 @@ export class PaymentService {
     const stripeKey = process.env.STRIPE_SECRET_KEY || this.apiSecret;
     if (this.gateway.toLowerCase() === 'stripe' && stripeKey) {
       this.stripe = new Stripe(stripeKey, {
-        apiVersion: '2024-11-20.acacia',
+        apiVersion: '2025-10-29.clover',
       });
     }
   }

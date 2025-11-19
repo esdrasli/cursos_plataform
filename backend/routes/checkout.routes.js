@@ -123,7 +123,7 @@ router.post('/create-checkout-session', authenticate, async (req, res) => {
     }
 
     const stripe = new Stripe(stripeKey, {
-      apiVersion: '2024-11-20.acacia',
+      apiVersion: '2025-10-29.clover',
     });
 
     const course = await Course.findById(courseId);
@@ -237,7 +237,7 @@ router.get('/session-status', authenticate, async (req, res) => {
     }
 
     const stripe = new Stripe(stripeKey, {
-      apiVersion: '2024-11-20.acacia',
+      apiVersion: '2025-10-29.clover',
     });
 
     const session = await stripe.checkout.sessions.retrieve(session_id);
