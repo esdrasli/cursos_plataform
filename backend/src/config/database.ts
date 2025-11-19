@@ -34,17 +34,6 @@ export const AppDataSource = new DataSource({
   schema: process.env.DB_SCHEMA || (process.env.NODE_ENV === 'production' && process.env.DB_SCHEMA_PROD) || undefined,
 });
 
-// Se DB_SCHEMA estiver configurado, definir search_path após conexão
-if (process.env.DB_SCHEMA || (process.env.NODE_ENV === 'production' && process.env.DB_SCHEMA_PROD)) {
-  const schema = process.env.DB_SCHEMA || process.env.DB_SCHEMA_PROD || 'cursos';
-  
-  // Configurar search_path após conexão (para cada conexão no pool)
-  AppDataSource.afterConnect = async (connection) => {
-    try {
-      await connection.query(`SET search_path TO ${schema}, public;`);
-    } catch (error: any) {
-      console.error(`⚠️  Erro ao configurar search_path: ${error.message}`);
-    }
-  };
-}
+// Nota: A configuração do search_path é feita em server.ts após AppDataSource.initialize()
+// Isso é necessário porque DataSource não possui a propriedade 'afterConnect'
 
