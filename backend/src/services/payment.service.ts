@@ -368,6 +368,7 @@ export class PaymentService {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private async processPagSeguro(_data: PaymentData): Promise<PaymentResult> {
     // Implementação para PagSeguro
     throw new Error('PagSeguro ainda não implementado');
