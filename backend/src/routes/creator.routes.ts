@@ -21,6 +21,21 @@ interface CreatorQuery {
   limit?: string | number;
 }
 
+interface ColorPalette {
+  primary: string;
+  secondary: string;
+  accent: string;
+  background: string;
+  text: string;
+}
+
+interface ColorPalettes {
+  primary: ColorPalette;
+  bold: ColorPalette;
+  elegant: ColorPalette;
+  vibrant: ColorPalette;
+}
+
 interface GeneratedAIContent {
   hero: {
     title: string;
@@ -671,7 +686,7 @@ async function generateSmartContent(
   });
 
   // Usar configurações do banco ou valores padrão
-  const colorPalettes = aiConfig.colorPalettes || {
+  const defaultColorPalettes: ColorPalettes = {
     primary: {
       primary: '#4F46E5',
       secondary: '#7C3AED',
@@ -701,6 +716,24 @@ async function generateSmartContent(
       text: '#1F2937',
     },
   };
+
+  // Type guard para verificar se colorPalettes do banco tem a estrutura correta
+  const isColorPalettes = (value: unknown): value is ColorPalettes => {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'primary' in value &&
+      typeof (value as Record<string, unknown>).primary === 'object' &&
+      (value as Record<string, unknown>).primary !== null &&
+      'bold' in value &&
+      typeof (value as Record<string, unknown>).bold === 'object' &&
+      (value as Record<string, unknown>).bold !== null
+    );
+  };
+
+  const colorPalettes: ColorPalettes = isColorPalettes(aiConfig.colorPalettes)
+    ? aiConfig.colorPalettes
+    : defaultColorPalettes;
 
   const defaultHeroImage = (typeof aiConfig.defaultHeroImage === 'string' ? aiConfig.defaultHeroImage : undefined) || 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=450&fit=crop';
   const defaultBenefits = (typeof aiConfig.defaultBenefits === 'string' ? aiConfig.defaultBenefits : undefined) || 'Acesso vitalício • Certificado reconhecido • Suporte exclusivo • Atualizações gratuitas • Projetos práticos';
