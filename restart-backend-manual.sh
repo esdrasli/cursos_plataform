@@ -1,0 +1,25 @@
+#!/bin/bash
+# Comandos para copiar e colar no terminal
+
+echo "📋 Execute estes comandos no seu terminal:"
+echo ""
+echo "# 1. Conectar ao servidor"
+echo "ssh root@195.35.16.131"
+echo "# (Senha: SisaaTTech1@)"
+echo ""
+echo "# 2. No servidor, execute:"
+echo "BACKEND_DIR=\$(find /home /var/www /opt -type d -name 'backend' 2>/dev/null | head -1)"
+echo "cd \"\$BACKEND_DIR\""
+echo ""
+echo "# 3. Reiniciar (escolha um método):"
+echo "pm2 restart backend"
+echo "# ou"
+echo "docker restart \$(docker ps --format '{{.Names}}' | grep backend | head -1)"
+echo "# ou"
+echo "systemctl restart backend"
+echo ""
+echo "# 4. Verificar status:"
+echo "pm2 status"
+echo "# ou"
+echo "pm2 logs backend --lines 20"
+
