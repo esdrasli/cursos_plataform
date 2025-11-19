@@ -81,8 +81,6 @@ export class PaymentService {
         throw new Error('API Key do Mercado Pago não configurada');
       }
 
-      const amountInCents = Math.round(data.amount * 100);
-
       if (data.paymentMethod === 'pix') {
         // Criar pagamento PIX
         const response = await axios.post(
