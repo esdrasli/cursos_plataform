@@ -702,8 +702,8 @@ async function generateSmartContent(
     },
   };
 
-  const defaultHeroImage = aiConfig.defaultHeroImage || 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=450&fit=crop';
-  const defaultBenefits = aiConfig.defaultBenefits || 'Acesso vitalício • Certificado reconhecido • Suporte exclusivo • Atualizações gratuitas • Projetos práticos';
+  const defaultHeroImage = (typeof aiConfig.defaultHeroImage === 'string' ? aiConfig.defaultHeroImage : undefined) || 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=450&fit=crop';
+  const defaultBenefits = (typeof aiConfig.defaultBenefits === 'string' ? aiConfig.defaultBenefits : undefined) || 'Acesso vitalício • Certificado reconhecido • Suporte exclusivo • Atualizações gratuitas • Projetos práticos';
 
   const title = courseTitle || 'Curso Online';
   const lowerPrompt = prompt.toLowerCase();
