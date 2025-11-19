@@ -308,12 +308,19 @@ export class PaymentService {
         // Buscar dados do PIX
         const pixData = confirmedIntent.next_action?.pix_display_qr_code;
 
+        // A estrutura do Stripe PixDisplayQrCode tem 'data' como propriedade que contém o código QR
+        const isPixDisplayQrCode = (data: unknown): data is { data?: string } => {
+          return typeof data === 'object' && data !== null;
+        };
+        
+        const qrCodeData = isPixDisplayQrCode(pixData) ? pixData.data : undefined;
+
         return {
           success: true,
           transactionId: paymentIntent.id,
           status: 'pending',
-          qrCode: pixData?.qr_code || '',
-          pixCode: pixData?.qr_code || '',
+          qrCode: qrCodeData || '',
+          pixCode: qrCodeData || '',
           paymentLink: paymentIntent.client_secret,
         };
       } else if (data.paymentMethod === 'boleto') {
