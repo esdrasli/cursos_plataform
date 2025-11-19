@@ -457,7 +457,7 @@ export class PaymentService {
     switch (this.gateway.toLowerCase()) {
       case 'mercadopago':
         return this.handleMercadoPagoWebhook(payload);
-      case 'stripe':
+      case 'stripe': {
         // Type guard para converter unknown para Buffer | string
         const stripePayload: Buffer | string = Buffer.isBuffer(payload) 
           ? payload 
@@ -465,6 +465,7 @@ export class PaymentService {
             ? payload 
             : Buffer.from(JSON.stringify(payload));
         return this.handleStripeWebhook(stripePayload, signature);
+      }
       default:
         return null;
     }
