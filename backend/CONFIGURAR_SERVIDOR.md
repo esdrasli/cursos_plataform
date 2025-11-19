@@ -11,7 +11,7 @@
 
 Se você tem acesso SSH ao servidor:
 
-### 1. Conectar ao servidor
+### 1. Conectar ao servidor  ....
 
 ```bash
 ssh usuario@195.35.16.131
