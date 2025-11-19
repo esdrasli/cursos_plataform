@@ -368,7 +368,7 @@ export class PaymentService {
     }
   }
 
-  private async processPagSeguro(data: PaymentData): Promise<PaymentResult> {
+  private async processPagSeguro(_data: PaymentData): Promise<PaymentResult> {
     // Implementação para PagSeguro
     throw new Error('PagSeguro ainda não implementado');
   }
