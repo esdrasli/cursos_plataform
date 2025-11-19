@@ -27,7 +27,7 @@ interface ProcessPaymentBody {
 }
 
 // Processar pagamento
-router.post('/process', authenticate, async (req: AuthRequest<{}, {}, ProcessPaymentBody>, res: Response) => {
+router.post('/process', authenticate, async (req: AuthRequest<never, never, ProcessPaymentBody>, res: Response) => {
   try {
     if (!req.user) {
       res.status(401).json({ message: 'Usuário não autenticado' });
