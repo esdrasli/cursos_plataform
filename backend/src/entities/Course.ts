@@ -9,7 +9,6 @@ import {
   ManyToMany,
   Index
 } from 'typeorm';
-import type { User } from './User.js';
 import { ModuleEntity } from './Module.js';
 
 @Entity('courses')
@@ -40,9 +39,9 @@ export class Course {
   @Column({ type: 'uuid' })
   instructorId!: string;
 
-  @ManyToOne(() => User)
+  @ManyToOne('User')
   @JoinColumn({ name: 'instructorId' })
-  instructorUser?: User;
+  instructorUser?: import('./User.js').User;
 
   @Column({ type: 'varchar', length: 500, default: 'https://i.pravatar.cc/150?img=1' })
   instructorAvatar!: string;
@@ -171,8 +170,8 @@ export class Course {
     };
   };
 
-  @ManyToMany(() => User, user => user.enrolledCourses)
-  enrolledUsers?: User[];
+  @ManyToMany('User', 'enrolledCourses')
+  enrolledUsers?: import('./User.js').User[];
 
   @CreateDateColumn()
   createdAt!: Date;

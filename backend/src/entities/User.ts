@@ -11,7 +11,6 @@ import {
   Index
 } from 'typeorm';
 import bcrypt from 'bcryptjs';
-import type { Course } from './Course.js';
 
 @Entity('users')
 @Index(['email'], { unique: true })
@@ -38,13 +37,13 @@ export class User {
   })
   role!: 'student' | 'creator' | 'admin';
 
-  @ManyToMany(() => Course, course => course.enrolledUsers)
+  @ManyToMany('Course', 'enrolledUsers')
   @JoinTable({
     name: 'user_enrolled_courses',
     joinColumn: { name: 'userId', referencedColumnName: 'id' },
     inverseJoinColumn: { name: 'courseId', referencedColumnName: 'id' }
   })
-  enrolledCourses!: Course[];
+  enrolledCourses!: import('./Course.js').Course[];
 
   @CreateDateColumn()
   createdAt!: Date;
