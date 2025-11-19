@@ -13,7 +13,7 @@ const router = express.Router();
 // Processar pagamento
 router.post('/process', authenticate, async (req, res) => {
   try {
-    const { courseId, paymentMethod, paymentData } = req.body;
+    const { courseId, paymentMethod } = req.body;
     
     if (!courseId || !paymentMethod) {
       return res.status(400).json({ message: 'courseId e paymentMethod são obrigatórios' });

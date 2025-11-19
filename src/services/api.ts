@@ -15,6 +15,17 @@ const getApiUrl = () => {
       console.warn('⚠️ VITE_API_URL contém nome de serviço Docker, usando proxy');
       return '/api';
     }
+    
+    // Corrigir Mixed Content: se a página está em HTTPS, garantir que a API também use HTTPS
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:') {
+      // Se a URL da API está em HTTP, converter para HTTPS
+      if (envUrl.startsWith('http://')) {
+        const httpsUrl = envUrl.replace('http://', 'https://');
+        console.warn('⚠️ Convertendo URL da API de HTTP para HTTPS:', envUrl, '→', httpsUrl);
+        return httpsUrl;
+      }
+    }
+    
     // URL válida para produção (ex: https://api.exemplo.com/api)
     return envUrl;
   }
