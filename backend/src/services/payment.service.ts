@@ -201,13 +201,19 @@ export class PaymentService {
       }
 
       throw new Error('Método de pagamento não suportado');
-    } catch (error: any) {
-      console.error('Erro ao processar pagamento Mercado Pago:', error.response?.data || error.message);
+    } catch (error: unknown) {
+      const isAxiosError = (err: unknown): err is { response?: { data?: { message?: string } }; message?: string } => {
+        return typeof err === 'object' && err !== null;
+      };
+      const axiosError = isAxiosError(error) ? error : null;
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      const axiosMessage = axiosError?.response?.data?.message;
+      console.error('Erro ao processar pagamento Mercado Pago:', axiosError?.response?.data || errorMessage);
       return {
         success: false,
         transactionId: '',
         status: 'rejected',
-        error: error.response?.data?.message || error.message || 'Erro ao processar pagamento',
+        error: axiosMessage || errorMessage || 'Erro ao processar pagamento',
       };
     }
   }
@@ -240,7 +246,7 @@ export class PaymentService {
               userId: data.metadata?.userId || '',
             },
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
           customer = await this.stripe.customers.create({
             email: data.customer.email,
             name: data.customer.name,
@@ -342,13 +348,14 @@ export class PaymentService {
       }
 
       throw new Error('Método de pagamento não suportado');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao processar pagamento Stripe:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       return {
         success: false,
         transactionId: '',
         status: 'rejected',
-        error: error.message || 'Erro ao processar pagamento',
+        error: errorMessage || 'Erro ao processar pagamento',
       };
     }
   }
@@ -384,13 +391,14 @@ export class PaymentService {
                 paymentIntent.status === 'requires_payment_method' ? 'pending' :
                 paymentIntent.status === 'canceled' ? 'rejected' : 'pending',
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao verificar pagamento Stripe:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       return {
         success: false,
         transactionId,
         status: 'rejected',
-        error: error.message,
+        error: errorMessage,
       };
     }
   }
@@ -411,13 +419,14 @@ export class PaymentService {
         transactionId: response.data.id.toString(),
         status: this.mapMercadoPagoStatus(response.data.status),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao verificar pagamento:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
       return {
         success: false,
         transactionId,
         status: 'rejected',
-        error: error.message,
+        error: errorMessage,
       };
     }
   }
@@ -435,12 +444,18 @@ export class PaymentService {
     return statusMap[status] || 'pending';
   }
 
-  async handleWebhook(payload: any, signature?: string): Promise<{ transactionId: string; status: string } | null> {
+  async handleWebhook(payload: unknown, signature?: string): Promise<{ transactionId: string; status: string } | null> {
     switch (this.gateway.toLowerCase()) {
       case 'mercadopago':
         return this.handleMercadoPagoWebhook(payload);
       case 'stripe':
-        return this.handleStripeWebhook(payload, signature);
+        // Type guard para converter unknown para Buffer | string
+        const stripePayload: Buffer | string = Buffer.isBuffer(payload) 
+          ? payload 
+          : typeof payload === 'string' 
+            ? payload 
+            : Buffer.from(JSON.stringify(payload));
+        return this.handleStripeWebhook(stripePayload, signature);
       default:
         return null;
     }
@@ -463,8 +478,9 @@ export class PaymentService {
       if (signature && webhookSecret) {
         try {
           event = this.stripe.webhooks.constructEvent(payloadBuffer, signature, webhookSecret);
-        } catch (err: any) {
-          console.error('Erro ao verificar webhook do Stripe:', err.message);
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+          console.error('Erro ao verificar webhook do Stripe:', errorMessage);
           return null;
         }
       } else {
@@ -475,8 +491,9 @@ export class PaymentService {
         }
         try {
           event = JSON.parse(payloadBuffer.toString()) as Stripe.Event;
-        } catch (err: any) {
-          console.error('Erro ao parsear webhook do Stripe:', err.message);
+        } catch (err: unknown) {
+          const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
+          console.error('Erro ao parsear webhook do Stripe:', errorMessage);
           return null;
         }
       }
@@ -503,14 +520,21 @@ export class PaymentService {
       }
 
       return null;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Erro ao processar webhook do Stripe:', error);
       return null;
     }
   }
 
-  private async handleMercadoPagoWebhook(payload: any): Promise<{ transactionId: string; status: string } | null> {
+  private async handleMercadoPagoWebhook(payload: unknown): Promise<{ transactionId: string; status: string } | null> {
     try {
+      // Type guard para verificar se payload tem estrutura esperada
+      const isMercadoPagoPayload = (p: unknown): p is { data?: { id?: unknown }; id?: unknown } => {
+        return typeof p === 'object' && p !== null;
+      };
+      if (!isMercadoPagoPayload(payload)) {
+        return null;
+      }
       // Mercado Pago envia o ID do pagamento no webhook
       const paymentId = payload.data?.id || payload.id;
       if (!paymentId) return null;
