@@ -626,9 +626,9 @@ async function generateSmartContent(
   });
 
   // Converter para objeto
-  const aiConfig: Record<string, any> = {};
+  const aiConfig: Record<string, string | number | boolean | object> = {};
   configs.forEach(config => {
-    let value: any = config.value;
+    let value: string | number | boolean | object = config.value;
     switch (config.type) {
       case 'number':
         value = parseFloat(config.value) || 0;
