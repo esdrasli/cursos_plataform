@@ -22,12 +22,43 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Middleware
+// Configuração de CORS mais permissiva para aceitar requisições do frontend
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: function (origin, callback) {
+    // Permitir requisições sem origin (ex: Postman, mobile apps)
+    if (!origin) return callback(null, true);
+    
+    // Lista de origens permitidas
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'http://localhost:5174',
+      'https://ndx.sisaatech.com',
+      'http://ndx.sisaatech.com',
+      'https://api.ndx.sisaatech.com',
+      'http://api.ndx.sisaatech.com'
+    ];
+    
+    // Verificar se a origem está na lista ou se é do mesmo domínio
+    if (allowedOrigins.includes(origin) || origin.includes('ndx.sisaatech.com')) {
+      callback(null, true);
+    } else if (process.env.NODE_ENV === 'development') {
+      // Em desenvolvimento, permitir todas as origens
+      callback(null, true);
+    } else {
+      callback(new Error('Não permitido pelo CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'stripe-signature']
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'stripe-signature'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// Tratar requisições OPTIONS (preflight) explicitamente
+app.options('*', cors());
 
 // Webhook do Stripe precisa de raw body (antes do express.json())
 app.use('/api/checkout/webhook', express.raw({ type: 'application/json' }));
