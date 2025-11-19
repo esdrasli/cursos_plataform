@@ -246,7 +246,8 @@ export class PaymentService {
               userId: data.metadata?.userId || '',
             },
           });
-        } catch (error: unknown) {
+        } catch {
+          // Se falhar ao buscar customer, criar um novo
           customer = await this.stripe.customers.create({
             email: data.customer.email,
             name: data.customer.name,
