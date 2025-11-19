@@ -21,6 +21,29 @@ interface CreatorQuery {
   limit?: string | number;
 }
 
+interface GeneratedAIContent {
+  hero: {
+    title: string;
+    subtitle: string;
+    cta: string;
+    image: string;
+  };
+  sections: Array<{
+    type: string;
+    content: string;
+  }>;
+  layout: {
+    heroLayout: 'centered' | 'split' | 'minimal';
+    heroBackground: 'gradient' | 'solid' | 'image';
+    colorScheme: 'primary' | 'bold' | 'elegant' | 'vibrant';
+    colors: Record<string, string>;
+    typography: 'bold' | 'elegant' | 'modern';
+    spacing: 'compact' | 'comfortable' | 'spacious';
+    ctaStyle: 'small' | 'medium' | 'large';
+    ctaPosition: 'left' | 'center' | 'right';
+  };
+}
+
 interface CreateLandingPageBody {
   title: string;
   courseId: string;
@@ -618,7 +641,7 @@ router.post('/ai/generate-content', async (req: AuthRequest<never, never, Genera
 async function generateSmartContent(
   prompt: string,
   courseTitle?: string
-): Promise<any> {
+): Promise<GeneratedAIContent> {
   // Buscar configurações do banco de dados
   const configRepository = AppDataSource.getRepository(AppConfig);
   const configs = await configRepository.find({
@@ -747,7 +770,13 @@ async function generateSmartContent(
   const isColorful = lowerPrompt.includes('colorido') || lowerPrompt.includes('vibrante') || lowerPrompt.includes('energético');
 
   // Gerar configurações de layout baseadas no contexto
-  let layoutConfig: any = {
+  let layoutConfig: {
+    heroLayout: 'centered' | 'split' | 'minimal';
+    heroBackground: 'gradient' | 'solid' | 'image';
+    colorScheme: 'primary' | 'bold' | 'elegant' | 'vibrant';
+    typography: 'bold' | 'elegant' | 'modern';
+    spacing: 'compact' | 'comfortable' | 'spacious';
+  } = {
     heroLayout: 'centered', // 'centered' | 'split' | 'minimal'
     heroBackground: 'gradient', // 'gradient' | 'solid' | 'image'
     colorScheme: 'primary', // 'primary' | 'bold' | 'elegant' | 'vibrant'
