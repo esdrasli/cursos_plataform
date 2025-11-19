@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import CoursesPage from './pages/CoursesPage';
 import CourseDetailPage from './pages/CourseDetailPage';
-import CheckoutPage from './pages/CheckoutPage';
 import CheckoutStripePage from './pages/CheckoutStripePage';
 import CheckoutReturnPage from './pages/CheckoutReturnPage';
 import DashboardPage from './pages/DashboardPage';
