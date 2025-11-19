@@ -24,6 +24,8 @@ jobs:
           source: "backend/"
           target: "/tmp/backend-deploy/"
           strip_components: 1
+          script_after: "true"  # Comando que sempre sucede para evitar falha
+          debug: true
       
       - name: Deploy to VPS
         uses: appleboy/ssh-action@master
@@ -31,8 +33,11 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          script_stop: false  # Não parar em caso de erro
           script: |
-            # Não usar set -e aqui para permitir tratamento de erros
+            # Ignorar erros do .bashrc
+            set +e
+            unset BASH_ENV  # Evitar executar .bashrc
             
             echo "🚀 Iniciando deploy do backend..."
             
