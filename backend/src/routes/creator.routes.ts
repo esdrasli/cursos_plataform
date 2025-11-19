@@ -349,7 +349,7 @@ router.get('/students', async (req: AuthRequest<never, never, never, CreatorQuer
     });
     const userMap = new Map(users.map(u => [u.id, u]));
 
-    enrollments.forEach((enrollment: any) => {
+    enrollments.forEach((enrollment: Enrollment) => {
       const userId = enrollment.userId;
       const student = userMap.get(userId);
       
