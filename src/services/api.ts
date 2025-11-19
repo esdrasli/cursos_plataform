@@ -1,4 +1,5 @@
 import axios from 'axios';
+import type { CreateCourseInput, UpdateCourseInput, ProcessPaymentRequest, UpdateBrandingInput, CreateLandingPageInput, UpdateLandingPageInput, ConfigValue, ConfigType } from '../types/index.js';
 
 // Configuração da URL da API
 // IMPORTANTE: 
@@ -169,11 +170,11 @@ export const coursesAPI = {
     const response = await api.get(`/courses/${id}`);
     return response.data;
   },
-  create: async (data: any) => {
+  create: async (data: CreateCourseInput) => {
     const response = await api.post('/courses', data);
     return response.data;
   },
-  update: async (id: string, data: any) => {
+  update: async (id: string, data: UpdateCourseInput) => {
     const response = await api.put(`/courses/${id}`, data);
     return response.data;
   },
@@ -193,7 +194,7 @@ export const coursesAPI = {
           const response = await api.get(`/checkout/course/${courseId}`);
           return response.data;
         },
-        process: async (data: { courseId: string; paymentMethod: string; paymentData?: any; affiliateCode?: string }) => {
+        process: async (data: ProcessPaymentRequest) => {
           const response = await api.post('/checkout/process', data);
           return response.data;
         },
@@ -277,7 +278,7 @@ export const brandingAPI = {
     const response = await api.get(`/branding/creator/${creatorId}`);
     return response.data;
   },
-  updateBranding: async (data: any) => {
+  updateBranding: async (data: UpdateBrandingInput) => {
     const response = await api.post('/branding/me', data);
     return response.data;
   },
@@ -313,11 +314,11 @@ export const creatorAPI = {
     const response = await api.get(`/creator/landing-pages/${id}`);
     return response.data;
   },
-  createLandingPage: async (data: any) => {
+  createLandingPage: async (data: CreateLandingPageInput) => {
     const response = await api.post('/creator/landing-pages', data);
     return response.data;
   },
-  updateLandingPage: async (id: string, data: any) => {
+  updateLandingPage: async (id: string, data: UpdateLandingPageInput) => {
     const response = await api.put(`/creator/landing-pages/${id}`, data);
     return response.data;
   },
@@ -393,11 +394,11 @@ export const configAPI = {
     const response = await api.get(`/config/${key}`);
     return response.data;
   },
-  set: async (key: string, value: any, type?: string, description?: string, category?: string) => {
+  set: async (key: string, value: ConfigValue, type?: ConfigType, description?: string, category?: string) => {
     const response = await api.post('/config', { key, value, type, description, category });
     return response.data;
   },
-  update: async (key: string, value: any, type?: string, description?: string, category?: string) => {
+  update: async (key: string, value: ConfigValue, type?: ConfigType, description?: string, category?: string) => {
     const response = await api.put(`/config/${key}`, { value, type, description, category });
     return response.data;
   },

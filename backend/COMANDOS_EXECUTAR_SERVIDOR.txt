@@ -1,0 +1,22 @@
+# Comandos para copiar e colar no servidor
+
+cd /opt/apps/cursos_plataform/backend
+
+# Fazer pull
+git pull origin main
+
+# Verificar se a rota está presente
+grep -n "create-checkout-session" routes/checkout.routes.js
+
+# Instalar dependências
+npm install
+
+# Fazer build (se usar TypeScript)
+npm run build
+
+# Reiniciar PM2
+pm2 restart cursos-api
+
+# Ver logs
+pm2 logs cursos-api --lines 20
+

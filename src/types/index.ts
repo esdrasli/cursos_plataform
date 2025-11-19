@@ -64,6 +64,33 @@ export interface Course {
   };
 }
 
+export interface CreateCourseInput {
+  title: string;
+  description: string;
+  thumbnail: string;
+  price: number;
+  originalPrice?: number;
+  category: string;
+  level?: 'Iniciante' | 'Intermediário' | 'Avançado';
+  duration: string;
+  modules?: Module[];
+  features?: string[];
+  status?: 'draft' | 'published';
+  sections?: Array<{
+    id: string;
+    type: 'banner' | 'modules' | 'features' | 'instructor' | 'testimonials' | 'cta' | 'text' | 'video';
+    order: number;
+    data: unknown;
+    visible?: boolean;
+  }>;
+  platformConfig?: Course['platformConfig'];
+  customization?: unknown;
+}
+
+export interface UpdateCourseInput extends Partial<CreateCourseInput> {
+  id?: never; // Não permitir atualizar o ID
+}
+
 export interface Module {
   id: string;
   title: string;
@@ -120,7 +147,7 @@ export interface LandingPage {
     cta: string;
     image: string;
   };
-  sections?: any[];
+  sections?: unknown[];
   layout?: {
     heroLayout?: 'centered' | 'split' | 'minimal';
     heroBackground?: 'gradient' | 'solid' | 'image';
@@ -137,4 +164,105 @@ export interface LandingPage {
     ctaStyle?: 'small' | 'medium' | 'large';
     ctaPosition?: 'left' | 'center' | 'right';
   };
+}
+
+export interface CreateLandingPageInput {
+  title: string;
+  courseId: string;
+  hero: {
+    title: string;
+    subtitle: string;
+    cta: string;
+    image: string;
+  };
+  status?: 'Publicada' | 'Rascunho';
+  sections?: unknown[];
+  layout?: LandingPage['layout'];
+}
+
+export interface UpdateLandingPageInput extends Partial<CreateLandingPageInput> {
+  id?: never; // Não permitir atualizar o ID
+}
+
+export type ConfigValue = string | number | boolean | Record<string, unknown> | unknown[];
+
+export type ConfigType = 'string' | 'number' | 'boolean' | 'json';
+
+export interface SetConfigInput {
+  key: string;
+  value: ConfigValue;
+  type?: ConfigType;
+  description?: string;
+  category?: string;
+}
+
+export interface PaymentData {
+  number?: string;
+  expiry?: string;
+  cvv?: string;
+  name?: string;
+  installments?: number;
+  document?: string;
+}
+
+export interface ProcessPaymentRequest {
+  courseId: string;
+  paymentMethod: 'credit' | 'pix' | 'boleto';
+  paymentData?: PaymentData;
+  affiliateCode?: string;
+}
+
+export interface BrandingData {
+  logo?: string;
+  logoDark?: string;
+  logoPosition?: 'left' | 'center' | 'right';
+  colors?: {
+    primary?: string;
+    secondary?: string;
+    accent?: string;
+    background?: string;
+    text?: string;
+    textSecondary?: string;
+    border?: string;
+    success?: string;
+    warning?: string;
+    error?: string;
+  };
+  fontFamily?: string;
+  headingFont?: string;
+  bodyFont?: string;
+  typography?: {
+    h1?: { size?: string; weight?: string; lineHeight?: string };
+    h2?: { size?: string; weight?: string; lineHeight?: string };
+    h3?: { size?: string; weight?: string; lineHeight?: string };
+    body?: { size?: string; weight?: string; lineHeight?: string };
+  };
+  coursesSection?: {
+    layout?: 'grid' | 'list' | 'carousel';
+    cardStyle?: 'default' | 'minimal' | 'elevated' | 'bordered';
+    showInstructor?: boolean;
+    showRating?: boolean;
+    showPrice?: boolean;
+    showCategory?: boolean;
+    cardBorderRadius?: string;
+    cardShadow?: string;
+  };
+  styles?: {
+    borderRadius?: string;
+    buttonStyle?: 'rounded' | 'square' | 'pill';
+    buttonSize?: 'sm' | 'md' | 'lg';
+    spacing?: 'compact' | 'comfortable' | 'spacious';
+    animation?: boolean;
+  };
+  favicon?: string;
+  meta?: {
+    title?: string;
+    description?: string;
+    keywords?: string;
+    ogImage?: string;
+  };
+}
+
+export interface UpdateBrandingInput extends Partial<BrandingData> {
+  id?: never; // Não permitir atualizar o ID
 }

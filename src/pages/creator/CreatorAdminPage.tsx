@@ -10,12 +10,9 @@ import {
   BarChart3,
   ArrowUpRight,
   ArrowDownRight,
-  Eye,
-  CheckCircle,
-  Clock,
   Award
 } from 'lucide-react';
-import { creatorAPI, coursesAPI } from '../../services/api';
+import { creatorAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 
 interface CourseStats {
@@ -128,9 +125,10 @@ const CreatorAdminPage: React.FC = () => {
 
         setStats(statsData);
         setCoursesStats(coursesStatsData);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('Erro ao carregar dados:', error);
-        setError(error.message || 'Erro ao carregar dados do dashboard');
+        const errorMessage = error instanceof Error ? error.message : 'Erro ao carregar dados do dashboard';
+        setError(errorMessage);
       } finally {
         setIsLoading(false);
       }
