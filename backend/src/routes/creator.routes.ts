@@ -140,9 +140,10 @@ router.get('/dashboard/stats', async (req: AuthRequest, res: Response) => {
       // Receita por curso
       revenueByCourse
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar estatísticas do dashboard:', error);
-    res.status(500).json({ message: 'Erro ao buscar estatísticas', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao buscar estatísticas', error: errorMessage });
   }
 });
 
@@ -219,9 +220,10 @@ router.get('/courses/stats', async (req: AuthRequest, res: Response) => {
     );
 
     res.json(coursesWithStats);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar estatísticas por curso:', error);
-    res.status(500).json({ message: 'Erro ao buscar estatísticas', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao buscar estatísticas', error: errorMessage });
   }
 });
 
@@ -292,9 +294,10 @@ router.get('/sales', async (req: AuthRequest<{}, {}, {}, CreatorQuery>, res: Res
         pages: Math.ceil(total / limitNum)
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar vendas:', error);
-    res.status(500).json({ message: 'Erro ao buscar vendas', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao buscar vendas', error: errorMessage });
   }
 });
 
@@ -414,9 +417,10 @@ router.get('/students', async (req: AuthRequest<{}, {}, {}, CreatorQuery>, res: 
         pages: Math.ceil(total / limitNum)
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar alunos:', error);
-    res.status(500).json({ message: 'Erro ao buscar alunos', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao buscar alunos', error: errorMessage });
   }
 });
 
@@ -436,9 +440,10 @@ router.get('/landing-pages', async (req: AuthRequest, res: Response) => {
     });
     
     res.json(landingPages);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar landing pages:', error);
-    res.status(500).json({ message: 'Erro ao buscar landing pages', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao buscar landing pages', error: errorMessage });
   }
 });
 
@@ -464,9 +469,10 @@ router.get('/landing-pages/:id', async (req: AuthRequest<{ id: string }>, res: R
     }
     
     res.json(landingPage);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar landing page:', error);
-    res.status(500).json({ message: 'Erro ao buscar landing page', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao buscar landing page', error: errorMessage });
   }
 });
 
@@ -507,9 +513,10 @@ router.post('/landing-pages', async (req: AuthRequest<{}, {}, CreateLandingPageB
     await landingPageRepository.save(landingPage);
     
     res.status(201).json(landingPage);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao criar landing page:', error);
-    res.status(500).json({ message: 'Erro ao criar landing page', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao criar landing page', error: errorMessage });
   }
 });
 
@@ -537,9 +544,10 @@ router.put('/landing-pages/:id', async (req: AuthRequest<{ id: string }>, res: R
     await landingPageRepository.save(landingPage);
     
     res.json(landingPage);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao atualizar landing page:', error);
-    res.status(500).json({ message: 'Erro ao atualizar landing page', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao atualizar landing page', error: errorMessage });
   }
 });
 
@@ -566,9 +574,10 @@ router.delete('/landing-pages/:id', async (req: AuthRequest<{ id: string }>, res
     await landingPageRepository.remove(landingPage);
     
     res.json({ message: 'Landing page deletada com sucesso' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao deletar landing page:', error);
-    res.status(500).json({ message: 'Erro ao deletar landing page', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao deletar landing page', error: errorMessage });
   }
 });
 
@@ -596,9 +605,10 @@ router.post('/ai/generate-content', async (req: AuthRequest<{}, {}, GenerateAICo
     // Gerar conteúdo inteligente baseado em templates e análise do prompt
     const aiContent = await generateSmartContent(prompt, courseTitle, courseDescription);
     res.json(aiContent);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao gerar conteúdo com IA:', error);
-    res.status(500).json({ message: 'Erro ao gerar conteúdo', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao gerar conteúdo', error: errorMessage });
   }
 });
 
