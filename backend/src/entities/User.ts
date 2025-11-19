@@ -11,7 +11,7 @@ import {
   Index
 } from 'typeorm';
 import bcrypt from 'bcryptjs';
-import { Course } from './Course.js';
+import type { Course } from './Course.js';
 
 @Entity('users')
 @Index(['email'], { unique: true })

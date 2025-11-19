@@ -9,7 +9,7 @@ import {
   ManyToMany,
   Index
 } from 'typeorm';
-import { User } from './User.js';
+import type { User } from './User.js';
 import { ModuleEntity } from './Module.js';
 
 @Entity('courses')
