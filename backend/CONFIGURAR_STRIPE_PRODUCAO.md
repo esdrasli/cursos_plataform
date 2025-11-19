@@ -7,6 +7,34 @@ Stripe não configurado
 
 Este erro ocorre quando as variáveis de ambiente do Stripe não estão configuradas no servidor de produção.
 
+## 🚀 Solução Rápida
+
+### Opção 1: Script de Verificação (Recomendado)
+
+Primeiro, verifique o que está faltando:
+
+```bash
+cd /opt/apps/cursos_plataform/backend
+./scripts/verificar-stripe.sh
+```
+
+O script irá mostrar exatamente quais variáveis estão faltando.
+
+### Opção 2: Correção Rápida
+
+Se você já tem as chaves do Stripe, use o script de correção rápida:
+
+```bash
+cd /opt/apps/cursos_plataform/backend
+./scripts/corrigir-stripe-rapido.sh
+```
+
+O script irá solicitar as chaves e configurar automaticamente.
+
+### Opção 3: Configuração Manual Completa
+
+Siga o passo a passo abaixo para configuração manual.
+
 ## 🔧 Passo a Passo para Configurar
 
 ### 1. Obter Chaves do Stripe
