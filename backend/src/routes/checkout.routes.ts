@@ -204,9 +204,10 @@ router.post('/process', authenticate, async (req: AuthRequest<never, never, Proc
       enrollment,
       status: paymentResult.status
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao processar pagamento:', error);
-    res.status(500).json({ message: 'Erro ao processar pagamento', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao processar pagamento', error: errorMessage });
   }
 });
 
@@ -231,9 +232,10 @@ router.get('/course/:courseId', async (req: Request<{ courseId: string }>, res: 
         instructor: course.instructor
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao buscar informações do checkout:', error);
-    res.status(500).json({ message: 'Erro ao buscar informações', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao buscar informações', error: errorMessage });
   }
 });
 
@@ -335,28 +337,37 @@ router.post('/create-checkout-session', authenticate, async (req: AuthRequest, r
     }
 
     res.json({ clientSecret: session.client_secret });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao criar checkout session:', error);
+    
+    // Type guard para erros do Stripe
+    const isStripeError = (err: unknown): err is { type?: string; code?: string; message?: string; raw?: unknown } => {
+      return typeof err === 'object' && err !== null;
+    };
+    
+    const stripeError = isStripeError(error) ? error : null;
+    
     console.error('Detalhes do erro:', {
-      type: error.type,
-      code: error.code,
-      message: error.message,
-      raw: error.raw
+      type: stripeError?.type,
+      code: stripeError?.code,
+      message: stripeError?.message || (error instanceof Error ? error.message : 'Erro desconhecido'),
+      raw: stripeError?.raw
     });
     
     // Mensagem de erro mais específica
-    let errorMessage = 'Erro ao criar sessão de checkout';
-    if (error.type === 'StripeInvalidRequestError') {
-      errorMessage = `Erro na requisição ao Stripe: ${error.message}`;
-    } else if (error.code === 'resource_missing') {
-      errorMessage = 'Recurso não encontrado no Stripe';
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    let finalErrorMessage = 'Erro ao criar sessão de checkout';
+    if (stripeError?.type === 'StripeInvalidRequestError') {
+      finalErrorMessage = `Erro na requisição ao Stripe: ${errorMessage}`;
+    } else if (stripeError?.code === 'resource_missing') {
+      finalErrorMessage = 'Recurso não encontrado no Stripe';
     }
     
     res.status(500).json({ 
-      message: errorMessage, 
-      error: error.message,
-      code: error.code,
-      type: error.type
+      message: finalErrorMessage, 
+      error: errorMessage,
+      code: stripeError?.code,
+      type: stripeError?.type
     });
   }
 });
@@ -394,9 +405,10 @@ router.get('/session-status', authenticate, async (req: AuthRequest, res: Respon
       payment_status: session.payment_status,
       metadata: session.metadata,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao verificar status da sessão:', error);
-    res.status(500).json({ message: 'Erro ao verificar status', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao verificar status', error: errorMessage });
   }
 });
 
@@ -507,9 +519,10 @@ router.post('/webhook', async (req: Request, res: Response) => {
 
     // Sempre retornar 200 para confirmar recebimento do webhook
     res.status(200).json({ message: 'Webhook processado com sucesso' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Erro ao processar webhook:', error);
-    res.status(500).json({ message: 'Erro ao processar webhook', error: error.message });
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    res.status(500).json({ message: 'Erro ao processar webhook', error: errorMessage });
   }
 });
 
