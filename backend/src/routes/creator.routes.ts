@@ -597,7 +597,7 @@ router.post('/ai/generate-content', async (req: AuthRequest<never, never, Genera
       return;
     }
 
-    const { prompt, courseTitle, courseDescription } = req.body;
+    const { prompt, courseTitle } = req.body;
 
     if (!prompt || !prompt.trim()) {
       res.status(400).json({ message: 'Prompt é obrigatório' });
@@ -605,7 +605,7 @@ router.post('/ai/generate-content', async (req: AuthRequest<never, never, Genera
     }
 
     // Gerar conteúdo inteligente baseado em templates e análise do prompt
-    const aiContent = await generateSmartContent(prompt, courseTitle, courseDescription);
+    const aiContent = await generateSmartContent(prompt, courseTitle);
     res.json(aiContent);
   } catch (error: unknown) {
     console.error('Erro ao gerar conteúdo com IA:', error);
@@ -617,8 +617,7 @@ router.post('/ai/generate-content', async (req: AuthRequest<never, never, Genera
 // Função para gerar conteúdo inteligente baseado em templates e análise do prompt
 async function generateSmartContent(
   prompt: string,
-  courseTitle?: string,
-  courseDescription?: string
+  courseTitle?: string
 ): Promise<any> {
   // Buscar configurações do banco de dados
   const configRepository = AppDataSource.getRepository(AppConfig);
