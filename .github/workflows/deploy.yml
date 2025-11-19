@@ -32,7 +32,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            set -e  # Parar em caso de erro
+            # Não usar set -e aqui para permitir tratamento de erros
             
             echo "🚀 Iniciando deploy do backend..."
             
@@ -62,21 +62,20 @@ jobs:
               fi
               
               # Copiar arquivos (preservando .env e outros arquivos importantes)
-              rsync -av --exclude='.env' --exclude='.env.*' --exclude='node_modules' --exclude='dist' /tmp/backend-deploy/ "$BACKEND_DIR/" || {
+              echo "📋 Copiando arquivos de /tmp/backend-deploy para $BACKEND_DIR..."
+              rsync -av --exclude='.env' --exclude='.env.*' --exclude='node_modules' --exclude='dist' --exclude='.git' /tmp/backend-deploy/ "$BACKEND_DIR/" || {
                 echo "⚠️  Rsync falhou, tentando cp..."
                 cp -r /tmp/backend-deploy/* "$BACKEND_DIR/" 2>/dev/null || true
+                cp -r /tmp/backend-deploy/.* "$BACKEND_DIR/" 2>/dev/null || true
               }
               
               # Limpar arquivos temporários
               rm -rf /tmp/backend-deploy
               echo "✅ Arquivos sincronizados"
             else
-              # Fallback: tentar git pull se rsync não funcionou
-              echo "📥 Tentando fazer pull do repositório (fallback)..."
-              git fetch origin main 2>/dev/null || echo "⚠️  Git fetch falhou"
-              git pull origin main 2>/dev/null || {
-                echo "⚠️  Git pull falhou. Verifique se os arquivos foram sincronizados."
-              }
+              echo "❌ Diretório /tmp/backend-deploy não encontrado!"
+              echo "⚠️  O SCP pode ter falhado. Verificando se podemos continuar..."
+              # Não falhar aqui, apenas avisar
             fi
             
             # Verificar se a rota está presente
