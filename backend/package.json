@@ -12,6 +12,7 @@
     "init-db": "tsx src/scripts/initDatabase.ts",
     "create-tables": "tsx src/scripts/createTables.ts",
     "check-tables": "tsx src/scripts/checkTables.ts",
+    "add-course-columns": "tsx src/scripts/addCourseColumns.ts",
     "check-tables-prod": "tsx check-tables-prod.ts",
     "create-tables-prod": "tsx create-tables-prod.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
