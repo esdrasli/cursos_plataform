@@ -26,6 +26,8 @@ interface CreateLandingPageBody {
   courseId: string;
   hero: IHero;
   status?: 'Publicada' | 'Rascunho';
+  sections?: any[];
+  layout?: any;
 }
 
 // ========== DASHBOARD ==========
